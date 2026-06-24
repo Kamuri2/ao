@@ -1,5 +1,6 @@
+import { useState, useEffect } from 'react';
 import { HashRouter as Router, Routes, Route } from 'react-router-dom';
-import { AudioProvider } from './context/AudioContext';
+import { AudioProvider, useAudio } from './context/AudioContext';
 import { ThemeProvider } from './context/ThemeContext';
 import HomeScreen from './screens/HomeScreen';
 import MiniPlayer from './components/MiniPlayer';
@@ -14,13 +15,25 @@ import ListDetailScreen from './screens/ListDetailScreen';
 import ErrorBoundary from './components/ErrorBoundary';
 
 function AppContent() {
+  const { isPlayerOpen } = useAudio();
+  const [renderPlayer, setRenderPlayer] = useState(isPlayerOpen);
+
+  useEffect(() => {
+    if (isPlayerOpen) {
+      setRenderPlayer(true);
+      return undefined;
+    } else {
+      const t = setTimeout(() => setRenderPlayer(false), 400);
+      return () => clearTimeout(t);
+    }
+  }, [isPlayerOpen]);
+
   return (
-    <div className="flex flex-col md:flex-row h-screen overflow-hidden bg-transparent">
+    <div className="flex flex-col md:flex-row h-screen overflow-hidden bg-transparent relative">
       <Sidebar />
       <div id="main-scroll-container" className="flex-1 overflow-y-auto pb-20 md:pb-0">
         <Routes>
           <Route path="/" element={<HomeScreen />} />
-          <Route path="/player" element={<PlayerScreen />} />
           <Route path="/settings" element={<SettingsScreen />} />
           <Route path="/albums" element={<AlbumsScreen />} />
           <Route path="/artists" element={<ArtistsScreen />} />
@@ -29,6 +42,13 @@ function AppContent() {
         </Routes>
       </div>
       <MiniPlayer />
+      {renderPlayer && (
+        <div 
+          className={`absolute inset-0 z-50 transition-transform duration-400 ease-[cubic-bezier(0.16,1,0.3,1)] ${isPlayerOpen ? 'translate-y-0' : 'translate-y-full'}`}
+        >
+          <PlayerScreen />
+        </div>
+      )}
     </div>
   );
 }

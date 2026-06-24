@@ -10,31 +10,61 @@ interface CoverImageProps {
   hq?: boolean;
 }
 
-export default function CoverImage({ coverUrl, className = '', placeholderClassName = '', iconSize = 24, audioPath, hq = false }: CoverImageProps) {
-  const [activeCover, setActiveCover] = useState(coverUrl);
+const MAX_CACHE_SIZE = 500;
+const coverCache = new Map<string, string | null>();
+const pendingFetches = new Map<string, Promise<string | null>>();
+
+function setCache(key: string, value: string | null) {
+  if (coverCache.size >= MAX_CACHE_SIZE) {
+    const firstKey = coverCache.keys().next().value;
+    if (firstKey) coverCache.delete(firstKey);
+  }
+  coverCache.set(key, value);
+}
+
+export default function CoverImage({ coverUrl, className = '', placeholderClassName = '', iconSize = 24, audioPath, hq = true }: CoverImageProps) {
+  const [, forceUpdate] = useState({});
+
+  let displayCover = coverUrl;
+  if (hq && audioPath && coverCache.has(audioPath)) {
+    const cached = coverCache.get(audioPath);
+    if (cached) displayCover = cached;
+  }
 
   useEffect(() => {
-    setActiveCover(coverUrl);
     let mounted = true;
-    if (hq && audioPath) {
-      const fetchHq = async () => {
-        try {
-          const cover = await window.api.getCover(audioPath);
-          if (mounted && cover) setActiveCover(cover);
-        } catch (e) {}
-      };
-      fetchHq();
+    if (hq && audioPath && !coverCache.has(audioPath)) {
+      if (!pendingFetches.has(audioPath)) {
+        const promise = window.api.getCover(audioPath).then(cover => {
+          setCache(audioPath, cover || null);
+          pendingFetches.delete(audioPath);
+          return cover || null;
+        }).catch(() => {
+          setCache(audioPath, null);
+          pendingFetches.delete(audioPath);
+          return null;
+        });
+        pendingFetches.set(audioPath, promise);
+      }
+      
+      pendingFetches.get(audioPath)?.then(() => {
+        if (mounted) forceUpdate({});
+      });
     }
     return () => { mounted = false; };
-  }, [coverUrl, audioPath, hq]);
+  }, [audioPath, hq]);
 
-  if (activeCover) {
+  if (displayCover) {
     return (
-      <div className={`overflow-hidden ${className}`}>
+      <div 
+        className={`overflow-hidden bg-cover bg-center ${className}`}
+        style={{ backgroundImage: `url("${displayCover}")` }}
+      >
         <img 
-          src={activeCover} 
+          src={displayCover} 
           alt="Cover"
-          className="w-full h-full object-cover transition-opacity duration-200"
+          decoding="sync"
+          className="w-full h-full object-cover opacity-0" 
         />
       </div>
     );

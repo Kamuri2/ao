@@ -1,4 +1,4 @@
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { useAudio } from '../context/AudioContext';
 import { useTheme } from '../context/ThemeContext';
 import { Play, Pause, SkipForward, SkipBack, Shuffle, Repeat } from 'lucide-react';
@@ -8,13 +8,12 @@ export default function MiniPlayer() {
   const { 
     currentSong, pauseOrResumeSound, playNext, playPrevious, metadata, 
     isPlaying, progress, duration, seekTo, isShuffle, toggleShuffle,
-    repeatMode, toggleRepeatMode
+    repeatMode, toggleRepeatMode, isPlayerOpen, setIsPlayerOpen
   } = useAudio();
   const { colors } = useTheme();
   const navigate = useNavigate();
-  const location = useLocation();
 
-  if (!currentSong || location.pathname === '/player') return null;
+  if (!currentSong || isPlayerOpen) return null;
 
   const handleSeek = (e: React.ChangeEvent<HTMLInputElement>) => {
     seekTo(Number(e.target.value));
@@ -44,9 +43,8 @@ export default function MiniPlayer() {
 
       <div 
         className="flex flex-row items-center justify-between px-4 py-3 cursor-pointer select-none"
-        onClick={() => navigate('/player')}
+        onClick={() => setIsPlayerOpen(true)}
       >
-        {/* Track Info (Left) */}
         <div className="flex flex-row items-center flex-1 min-w-0">
           <CoverImage 
             coverUrl={metadata.cover} 
@@ -59,7 +57,13 @@ export default function MiniPlayer() {
             <span className="font-bold text-sm text-white truncate hover:underline cursor-pointer">
               {currentSong.title || currentSong.filename.replace(/\.[^/.]+$/, "")}
             </span>
-            <span className="text-xs text-white/60 truncate font-medium mt-0.5 hover:underline cursor-pointer">
+            <span 
+              className="text-xs text-white/60 truncate font-medium mt-0.5 hover:underline cursor-pointer"
+              onClick={(e) => {
+                e.stopPropagation();
+                navigate(`/detail/artist/${encodeURIComponent(currentSong.artist || 'Desconocido')}`);
+              }}
+            >
               {currentSong.artist || 'Desconocido'}
             </span>
           </div>

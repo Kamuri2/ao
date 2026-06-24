@@ -32,6 +32,17 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const queueRef = useRef<Song[]>([]);
   const currentQueueIndex = useRef(-1);
+  const originalQueueRef = useRef<Song[]>([]);
+  const repeatModeRef = useRef(repeatMode);
+  const isShuffleRef = useRef(isShuffle);
+  const currentContextIdRef = useRef(currentContextId);
+
+  useEffect(() => { repeatModeRef.current = repeatMode; }, [repeatMode]);
+  useEffect(() => { isShuffleRef.current = isShuffle; }, [isShuffle]);
+  useEffect(() => { currentContextIdRef.current = currentContextId; }, [currentContextId]);
+
+  const [isScanning, setIsScanning] = useState(false);
+  const [isPlayerOpen, setIsPlayerOpen] = useState(false);
 
   useEffect(() => {
     const audio = new Audio();
@@ -76,7 +87,6 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
     
     if (storedFolder) {
-      // Reload in background
       loadSongsFromUri(storedFolder, true);
     }
   }, []);
@@ -122,11 +132,28 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     setAlbums(albumsObj);
     setFolders(foldersObj);
     setArtists(artistsObj);
+
+    // Fetch artist profile images asynchronously in batch
+    const fetchArtistImages = async () => {
+      const artistNames = Object.keys(artistsObj).filter(n => n !== 'Desconocido');
+      
+      for (const name of artistNames) {
+        const url = await window.api.getArtistImage(name);
+        if (url && url !== artistsObj[name].cover) {
+          setArtists(prev => ({
+            ...prev,
+            [name]: { ...prev[name], cover: url }
+          }));
+        }
+        // Small delay to be polite to APIs and avoid rate limits
+        await new Promise(r => setTimeout(r, 200));
+      }
+    };
+    fetchArtistImages();
   };
 
   const handleTrackEnded = () => {
-    // Determine next track based on repeat mode
-    if (repeatMode === 'track') {
+    if (repeatModeRef.current === 'track') {
       audioRef.current!.currentTime = 0;
       audioRef.current!.play();
     } else {
@@ -134,7 +161,7 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
   };
 
-  const loadSongsFromUri = async (folderPath?: string, isBackgroundLoad?: boolean) => {
+  const loadSongsFromUri = async (folderPath?: string, _isBackgroundLoad?: boolean) => {
     let targetFolder: string | null | undefined = folderPath;
     if (!targetFolder) {
       targetFolder = await window.api.openDirectory();
@@ -145,12 +172,13 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       }
     }
 
+    setIsScanning(true);
     try {
       const nativeSongs = await window.api.readMusicFiles(targetFolder);
       
       const formattedSongs: Song[] = nativeSongs.map((asset: any) => ({
         ...asset,
-        duration: 0, // We will calculate this on demand or extract via metadata later
+        duration: 0,
       }));
 
       formattedSongs.sort((a, b) => {
@@ -162,20 +190,13 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       setSongs(formattedSongs);
       buildLists(formattedSongs);
 
-      if (!isBackgroundLoad) {
-        try {
-          localStorage.setItem('@cached_songs', JSON.stringify(formattedSongs));
-        } catch(e) {
-           console.warn("Could not save to cache", e);
-        }
-      } else {
-        // Even in background, update the cache
-        try {
-          localStorage.setItem('@cached_songs', JSON.stringify(formattedSongs));
-        } catch(e) {}
-      }
+      try {
+        localStorage.setItem('@cached_songs', JSON.stringify(formattedSongs));
+      } catch(e) {}
     } catch (e) {
       console.error("Error loading songs:", e);
+    } finally {
+      setIsScanning(false);
     }
   };
 
@@ -254,28 +275,34 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
   };
 
-  const playSound = async (song: Song, contextId?: string, contextList?: Song[], forceShuffle?: boolean) => {
-    let targetList = contextList && contextList.length > 0 ? contextList : songs;
-    let targetContextId = contextId || 'all';
-    
-    setCurrentContextId(targetContextId);
-    
-    let tracks = [...targetList];
-    if (isShuffle || forceShuffle) {
-      const otherTracks = tracks.filter(s => s.id !== song.id);
-      for (let i = otherTracks.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [otherTracks[i], otherTracks[j]] = [otherTracks[j], otherTracks[i]];
+  const playSound = async (song: Song, contextId?: string, contextList?: Song[], forceShuffle?: boolean, rebuildQueue: boolean = true) => {
+    if (rebuildQueue) {
+      let targetList = contextList && contextList.length > 0 ? contextList : songs;
+      let targetContextId = contextId || 'all';
+      
+      setCurrentContextId(targetContextId);
+      originalQueueRef.current = [...targetList];
+      
+      let tracks = [...targetList];
+      if (isShuffleRef.current || forceShuffle) {
+        const otherTracks = tracks.filter(s => s.id !== song.id);
+        for (let i = otherTracks.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [otherTracks[i], otherTracks[j]] = [otherTracks[j], otherTracks[i]];
+        }
+        tracks = [song, ...otherTracks];
       }
-      tracks = [song, ...otherTracks];
+      
+      queueRef.current = tracks;
+      setQueue(tracks);
+      currentQueueIndex.current = tracks.findIndex(s => s.id === song.id);
+      
+      setQueueLength(tracks.length);
+      setQueuePosition(currentQueueIndex.current + 1);
+    } else {
+      currentQueueIndex.current = queueRef.current.findIndex(s => s.id === song.id);
+      setQueuePosition(currentQueueIndex.current + 1);
     }
-    
-    queueRef.current = tracks;
-    setQueue(tracks);
-    currentQueueIndex.current = tracks.findIndex(s => s.id === song.id);
-    
-    setQueueLength(tracks.length);
-    setQueuePosition(currentQueueIndex.current + 1);
     
     if (audioRef.current) {
       audioRef.current.src = song.uri;
@@ -306,11 +333,11 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     if (currentQueueIndex.current >= 0 && currentQueueIndex.current < queueRef.current.length - 1) {
       currentQueueIndex.current += 1;
       const nextSong = queueRef.current[currentQueueIndex.current];
-      playSound(nextSong, currentContextId, queueRef.current, false);
-    } else if (repeatMode === 'queue' && queueRef.current.length > 0) {
+      playSound(nextSong, currentContextIdRef.current, undefined, false, false);
+    } else if (repeatModeRef.current === 'queue' && queueRef.current.length > 0) {
       currentQueueIndex.current = 0;
       const nextSong = queueRef.current[0];
-      playSound(nextSong, currentContextId, queueRef.current, false);
+      playSound(nextSong, currentContextIdRef.current, undefined, false, false);
     }
   };
 
@@ -318,13 +345,13 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     if (currentQueueIndex.current > 0) {
       currentQueueIndex.current -= 1;
       const prevSong = queueRef.current[currentQueueIndex.current];
-      playSound(prevSong, currentContextId, queueRef.current, false);
+      playSound(prevSong, currentContextIdRef.current, undefined, false, false);
     }
   };
 
-  const seekTo = async (millis: number) => {
+  const seekTo = async (seconds: number) => {
     if (audioRef.current) {
-      audioRef.current.currentTime = millis / 1000;
+      audioRef.current.currentTime = seconds;
     }
   };
 
@@ -344,7 +371,29 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   };
 
   const toggleShuffle = async () => {
-    setIsShuffle(!isShuffle);
+    const newState = !isShuffle;
+    setIsShuffle(newState);
+    
+    if (!currentSong) return;
+    
+    if (newState) {
+      const otherTracks = originalQueueRef.current.filter(s => s.id !== currentSong.id);
+      for (let i = otherTracks.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [otherTracks[i], otherTracks[j]] = [otherTracks[j], otherTracks[i]];
+      }
+      const newQueue = [currentSong, ...otherTracks];
+      queueRef.current = newQueue;
+      setQueue(newQueue);
+      currentQueueIndex.current = 0;
+      setQueuePosition(1);
+    } else {
+      const newQueue = [...originalQueueRef.current];
+      queueRef.current = newQueue;
+      setQueue(newQueue);
+      currentQueueIndex.current = newQueue.findIndex(s => s.id === currentSong.id);
+      setQueuePosition(currentQueueIndex.current + 1);
+    }
   };
 
   const reorderQueue = (startIndex: number, endIndex: number) => {
@@ -363,7 +412,7 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   return (
     <AudioContext.Provider value={{
-      songs, setSongs, albums, folders, artists, playlists,
+      isScanning, songs, setSongs, albums, folders, artists, playlists,
       createPlaylist, deletePlaylist, addSongToPlaylist, removeSongFromPlaylist, updatePlaylistCover,
       currentSong, isPlaying, metadata: { cover: currentSong?.cover || null, lyrics, audioDetails },
       playSound, playWithShuffle, pauseOrResumeSound, playNext, playPrevious, seekTo,
@@ -371,7 +420,7 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       metadataCache: {}, extractMetadataOnDemand, currentContextId,
       loadSongsFromUri, queue, queuePosition, queueLength, reorderQueue,
       toggleFavorite, isFavorite, repeatMode, toggleRepeatMode, isShuffle,
-      toggleShuffle, changeMusicFolder
+      toggleShuffle, changeMusicFolder, isPlayerOpen, setIsPlayerOpen
     }}>
       {children}
     </AudioContext.Provider>

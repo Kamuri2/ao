@@ -11,7 +11,7 @@ const SongListItem = React.memo(({ item, isPlaying, onPress, index }: any) => {
 
   return (
     <div 
-      className="flex flex-row items-center p-3 rounded-xl mb-2 cursor-pointer hover:bg-black/5 dark:hover:bg-white/5 transition-all duration-200 hover:scale-[1.01] active:scale-95 group"
+      className="flex flex-row items-center p-3 rounded-xl mb-2 cursor-pointer hover:bg-black/5 dark:hover:bg-white/5 transition-colors group"
       onClick={onPress}
       style={{ animationDelay: `${index * 30}ms` }}
     >
@@ -67,9 +67,9 @@ export default function ListDetailScreen() {
   } else if (type === 'artist' && id && artists[id]) {
     dataList = artists[id].songs;
     title = artists[id].name;
-    subtitle = 'Artista';
+    subtitle = `${dataList.length} pistas`;
     cover = artists[id].cover;
-    audioPath = dataList[0]?.path;
+    audioPath = undefined; // Don't fallback to song cover for artists
   }
 
   if (!dataList) {
@@ -81,6 +81,16 @@ export default function ListDetailScreen() {
     );
   }
 
+  const artistAlbums = type === 'artist' && title
+    ? Object.values(albums).filter((a: any) => a.artist === title && a.name !== 'Desconocido')
+    : [];
+
+  const albumSongIds = new Set(artistAlbums.flatMap((a: any) => a.songs.map((s: any) => s.id)));
+  
+  const displayList = type === 'artist' 
+    ? dataList.filter((s: any) => !albumSongIds.has(s.id))
+    : dataList;
+
   const totalDuration = dataList.reduce((acc: number, song: any) => acc + (song.duration || 0), 0);
   const formatDuration = (seconds: number) => {
     const h = Math.floor(seconds / 3600);
@@ -90,7 +100,7 @@ export default function ListDetailScreen() {
   };
 
   return (
-    <div className="flex-1 min-h-screen pb-24 flex flex-col animate-slide-up">
+    <div className="flex-1 min-h-screen pb-24 flex flex-col animate-fade-in">
       {/* Header Section (Spotify Style) */}
       <div className="relative pt-12 pb-8 px-8 flex flex-col md:flex-row items-end border-b border-black/5 dark:border-white/5">
         <div className="absolute top-6 left-6 z-10">
@@ -134,7 +144,7 @@ export default function ListDetailScreen() {
         <button 
           className="w-14 h-14 rounded-full flex items-center justify-center transition-transform hover:scale-105 active:scale-95 shadow-lg"
           style={{ backgroundColor: colors.primary, color: '#000' }}
-          onClick={() => playWithShuffle('list', dataList)}
+          onClick={() => playSound(dataList[0], 'list', dataList, false)}
         >
           <Play size={28} fill="currentColor" className="ml-1" />
         </button>
@@ -148,21 +158,67 @@ export default function ListDetailScreen() {
         </button>
       </div>
 
+      {/* Artist Albums */}
+      {type === 'artist' && artistAlbums.length > 0 && (
+        <div className="px-8 mb-8">
+          <h2 className="text-2xl font-bold mb-4" style={{ color: colors.text }}>Álbumes</h2>
+          <div 
+            className="flex overflow-x-auto gap-4 pb-4 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]"
+            onWheel={(e) => {
+              if (e.currentTarget) {
+                e.currentTarget.scrollLeft += e.deltaY;
+              }
+            }}
+          >
+            {artistAlbums.map((album: any) => (
+              <div 
+                key={album.name}
+                className="flex flex-col flex-shrink-0 w-32 md:w-40 cursor-pointer group"
+                onClick={() => navigate(`/detail/album/${encodeURIComponent(album.name)}`)}
+              >
+                <div className="w-32 h-32 md:w-40 md:h-40 rounded-xl shadow-lg overflow-hidden mb-3 relative bg-black/5 dark:bg-white/5">
+                  <CoverImage 
+                    coverUrl={album.cover} 
+                    audioPath={album.songs[0]?.path}
+                    hq={true}
+                    className="w-full h-full object-cover" 
+                    placeholderClassName="w-full h-full"
+                  />
+                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                    <Play size={32} color="#fff" />
+                  </div>
+                </div>
+                <span className="font-bold text-sm truncate" style={{ color: colors.text }}>{album.name}</span>
+                <span className="text-xs opacity-70 truncate mt-0.5" style={{ color: colors.text }}>{album.year || `${album.songs.length} pistas`}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Track List */}
       <div className="flex-1">
-        <Virtuoso
-          customScrollParent={document.getElementById('main-scroll-container') as HTMLElement}
-          data={dataList}
-          className="px-8"
-          itemContent={(index, song) => (
-            <SongListItem 
-              item={song} 
-              index={index} 
-              isPlaying={currentSong?.id === song.id}
-              onPress={() => playSound(song, 'list', dataList)}
-            />
-          )}
-        />
+        {type === 'artist' && (
+          <h2 className="px-8 text-2xl font-bold mb-4" style={{ color: colors.text }}>
+            {displayList.length > 0 ? "Canciones Sueltas" : ""}
+          </h2>
+        )}
+        {displayList.length > 0 && (
+          <Virtuoso
+            customScrollParent={document.getElementById('main-scroll-container') as HTMLElement}
+            data={displayList}
+            initialTopMostItemIndex={Math.max(0, displayList.findIndex((s: any) => s.id === currentSong?.id))}
+            className="px-8"
+            itemContent={(index, song) => (
+              <SongListItem 
+                item={song} 
+                index={index} 
+                isPlaying={currentSong?.id === song.id}
+                onPress={() => playSound(song, 'list', displayList)}
+              />
+            )}
+          />
+        )}
       </div>
     </div>
   );

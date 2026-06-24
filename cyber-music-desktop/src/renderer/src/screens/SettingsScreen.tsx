@@ -1,12 +1,12 @@
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, FolderOpen, Trash2 } from 'lucide-react';
+import { ArrowLeft, FolderOpen, Trash2, RefreshCw } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
 import { useAudio } from '../context/AudioContext';
 
 export default function SettingsScreen() {
   const navigate = useNavigate();
   const { colors, isDarkMode, toggleTheme } = useTheme();
-  const { loadSongsFromUri, songs } = useAudio();
+  const { loadSongsFromUri, songs, isScanning } = useAudio();
   const currentFolder = localStorage.getItem('@music_folder');
 
   const handleClearFolder = () => {
@@ -57,23 +57,39 @@ export default function SettingsScreen() {
             </p>
           )}
 
-          <div className="flex flex-row gap-4 mt-4">
-            <button 
-              className="flex-1 flex flex-row items-center justify-center gap-2 px-4 py-3 rounded-lg font-bold transition-transform active:scale-95"
-              style={{ backgroundColor: colors.primary, color: '#000' }}
-              onClick={() => loadSongsFromUri()}
-            >
-              <FolderOpen size={20} />
-              Seleccionar Carpeta
-            </button>
+          <div className="flex flex-col gap-4 mt-4">
+            <div className="flex flex-row gap-4">
+              <button 
+                className="flex-1 flex flex-row items-center justify-center gap-2 px-4 py-3 rounded-lg font-bold transition-transform active:scale-95 disabled:opacity-50 disabled:scale-100"
+                style={{ backgroundColor: colors.primary, color: '#000' }}
+                onClick={() => loadSongsFromUri()}
+                disabled={isScanning}
+              >
+                <FolderOpen size={20} />
+                Seleccionar Carpeta
+              </button>
+
+              {currentFolder && (
+                <button 
+                  className="flex-1 flex flex-row items-center justify-center gap-2 px-4 py-3 rounded-lg font-bold transition-transform active:scale-95 disabled:opacity-50 disabled:scale-100"
+                  style={{ backgroundColor: colors.primary, color: '#000' }}
+                  onClick={() => loadSongsFromUri(currentFolder, false)}
+                  disabled={isScanning}
+                >
+                  <RefreshCw size={20} className={isScanning ? 'animate-spin' : ''} />
+                  {isScanning ? 'Escaneando...' : 'Escanear (Reparar)'}
+                </button>
+              )}
+            </div>
 
             {currentFolder && (
               <button 
-                className="flex flex-row items-center justify-center gap-2 px-4 py-3 rounded-lg font-bold transition-transform active:scale-95 bg-red-500/10 text-red-500 hover:bg-red-500/20"
+                className="flex flex-row items-center justify-center gap-2 px-4 py-3 rounded-lg font-bold transition-transform active:scale-95 bg-red-500/10 text-red-500 hover:bg-red-500/20 disabled:opacity-50 disabled:scale-100 w-full md:w-auto"
                 onClick={handleClearFolder}
+                disabled={isScanning}
               >
                 <Trash2 size={20} />
-                Limpiar
+                Limpiar Memoria
               </button>
             )}
           </div>

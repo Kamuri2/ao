@@ -8,7 +8,8 @@ const api = {
   openDirectory: () => ipcRenderer.invoke('dialog:openDirectory'),
   readMusicFiles: (folderPath: string) => ipcRenderer.invoke('fs:readMusicFiles', folderPath),
   getMetadata: (filePath: string) => ipcRenderer.invoke('fs:getMetadata', filePath),
-  getCover: (filePath: string) => ipcRenderer.invoke('fs:getCover', filePath)
+  getCover: (filePath: string) => ipcRenderer.invoke('fs:getCover', filePath),
+  getArtistImage: (artistName: string) => ipcRenderer.invoke('api:getArtistImage', artistName)
 }
 // Use `contextBridge` APIs to expose Electron APIs to
 // renderer only if context isolation is enabled, otherwise

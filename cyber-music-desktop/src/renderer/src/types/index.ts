@@ -11,6 +11,7 @@ export interface Song {
   artist?: string;
   cover?: string | null;
   lyrics?: string;
+  hasLyrics?: boolean;
   trackNumber?: number;
 }
 
@@ -49,6 +50,7 @@ export interface Artist {
 }
 
 export interface AudioContextType {
+  isScanning: boolean;
   songs: Song[];
   setSongs: (songs: Song[]) => void;
   albums: Record<string, Album>;
@@ -89,4 +91,6 @@ export interface AudioContextType {
   isShuffle: boolean;
   toggleShuffle: () => Promise<void>;
   changeMusicFolder: () => Promise<void>;
+  isPlayerOpen: boolean;
+  setIsPlayerOpen: (open: boolean) => void;
 }
