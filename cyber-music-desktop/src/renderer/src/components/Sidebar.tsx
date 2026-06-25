@@ -1,6 +1,7 @@
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Home, FolderOpen, Disc3, Mic2, Settings } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
+import astroLogo from '../assets/Astro.png';
 
 export default function Sidebar() {
   const navigate = useNavigate();
@@ -31,7 +32,7 @@ export default function Sidebar() {
          style={{ backgroundColor: colors.background }}>
       
       <div className="hidden md:block w-full mb-8 px-2">
-        <h1 className="text-2xl font-black tracking-widest uppercase" style={{ color: colors.text }}>CyberMusic</h1>
+        <img src={astroLogo} alt="Astro Logo" className="h-10 w-auto object-contain" />
       </div>
 
       <div className="flex flex-row md:flex-col w-full justify-around md:justify-start md:gap-2">

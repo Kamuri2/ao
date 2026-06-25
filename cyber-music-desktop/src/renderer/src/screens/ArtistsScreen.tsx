@@ -1,9 +1,18 @@
 import { useAudio } from '../context/AudioContext';
 import { useTheme } from '../context/ThemeContext';
 import CoverImage from '../components/CoverImage';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { VirtuosoGrid } from 'react-virtuoso';
+import { motion } from 'framer-motion';
 import React from 'react';
+
+const GridList = React.forwardRef<HTMLDivElement, any>(({ style, children, ...props }, ref) => (
+  <div ref={ref} {...props} style={style} className="grid grid-cols-2 md:grid-cols-4 gap-6 w-full pb-8">
+    {children}
+  </div>
+));
+
+const GridItem = ({ children, ...props }: any) => <div {...props}>{children}</div>;
 
 export default function ArtistsScreen() {
   const { artists } = useAudio();
@@ -16,18 +25,18 @@ export default function ArtistsScreen() {
       <VirtuosoGrid
         customScrollParent={document.getElementById('main-scroll-container') as HTMLElement}
         data={Object.values(artists)}
+        computeItemKey={(index, item: any) => item.name}
         components={{
-          List: React.forwardRef<HTMLDivElement, any>(({ style, children, ...props }, ref) => (
-            <div ref={ref} {...props} style={style} className="grid grid-cols-2 md:grid-cols-4 gap-6 w-full pb-8">
-              {children}
-            </div>
-          )),
-          Item: ({ children, ...props }) => <div {...props}>{children}</div>
+          List: GridList,
+          Item: GridItem,
+          Footer: () => <div style={{ height: '120px', width: '100%' }} />
         }}
         itemContent={(_, artist: any) => (
           <div className="flex flex-col items-center group cursor-pointer h-full"
                onClick={() => navigate(`/detail/artist/${encodeURIComponent(artist.name)}`)}>
-            <div className="w-full aspect-square rounded-full mb-4 overflow-hidden shadow-lg bg-black/5 dark:bg-white/5">
+            <div 
+              className="w-full aspect-square rounded-full mb-4 overflow-hidden shadow-lg bg-black/5 dark:bg-white/5 transition-all duration-300 group-hover:brightness-110"
+            >
               <CoverImage 
                 coverUrl={artist.cover} 
                 hq={true}

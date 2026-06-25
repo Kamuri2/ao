@@ -15,6 +15,9 @@ export default function QueuePanel({ onClose }: QueuePanelProps) {
   const { colors } = useTheme();
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
   const virtuosoRef = useRef<VirtuosoHandle>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const scrollAnimationRef = useRef<number | null>(null);
+  const speedRef = useRef(0);
 
   const offset = Math.max(0, queuePosition - 1);
   const upcomingQueue = queue.slice(offset);
@@ -51,7 +54,59 @@ export default function QueuePanel({ onClose }: QueuePanelProps) {
 
   const handleDragEnd = (e: React.DragEvent) => {
     setDraggedIndex(null);
+    speedRef.current = 0;
+    if (scrollAnimationRef.current) {
+      cancelAnimationFrame(scrollAnimationRef.current);
+      scrollAnimationRef.current = null;
+    }
     (e.target as HTMLElement).style.opacity = '1';
+  };
+
+  const handleContainerDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    if (!containerRef.current) return;
+
+    const rect = containerRef.current.getBoundingClientRect();
+    const y = e.clientY - rect.top;
+    const threshold = 80; // pixels from edge to trigger scroll
+
+    let newSpeed = 0;
+    if (y < threshold) {
+      // Near top
+      newSpeed = -15 * (1 - y / threshold);
+    } else if (y > rect.height - threshold) {
+      // Near bottom
+      newSpeed = 15 * (1 - (rect.height - y) / threshold);
+    }
+
+    if (newSpeed !== 0) {
+      speedRef.current = newSpeed;
+      if (!scrollAnimationRef.current) {
+        const scrollStep = () => {
+          if (containerRef.current && speedRef.current !== 0) {
+            const scroller = containerRef.current.querySelector('[data-virtuoso-scroller]') as HTMLElement;
+            if (scroller) {
+              scroller.scrollTop += speedRef.current;
+            }
+            scrollAnimationRef.current = requestAnimationFrame(scrollStep);
+          } else {
+            scrollAnimationRef.current = null;
+          }
+        };
+        scrollAnimationRef.current = requestAnimationFrame(scrollStep);
+      }
+    } else {
+      speedRef.current = 0;
+      if (scrollAnimationRef.current) {
+        cancelAnimationFrame(scrollAnimationRef.current);
+        scrollAnimationRef.current = null;
+      }
+    }
+  };
+
+  const handleContainerDragLeave = () => {
+    speedRef.current = 0;
   };
 
   return (
@@ -66,7 +121,12 @@ export default function QueuePanel({ onClose }: QueuePanelProps) {
         </button>
       </div>
 
-      <div className="flex-1 overflow-hidden p-0 pt-4">
+      <div 
+        ref={containerRef}
+        className="flex-1 overflow-hidden p-0 pt-4"
+        onDragOver={handleContainerDragOver}
+        onDragLeave={handleContainerDragLeave}
+      >
         <Virtuoso
           ref={virtuosoRef}
           style={{ height: '100%' }}

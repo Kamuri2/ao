@@ -67,7 +67,7 @@ export interface AudioContextType {
   currentSong: Song | null;
   isPlaying: boolean;
   metadata: { cover: string | null; lyrics: string | null; audioDetails: { bitrate?: number; sampleRate?: number; format?: string } | null };
-  playSound: (song: Song, contextId?: string, contextList?: Song[], forceShuffle?: boolean) => Promise<void>;
+  playSound: (song: Song, contextId?: string, contextList?: Song[], forceShuffle?: boolean, rebuildQueue?: boolean) => Promise<void>;
   playWithShuffle: (contextId?: string, contextList?: Song[]) => Promise<void>;
   pauseOrResumeSound: () => Promise<void>;
   playNext: () => Promise<void>;
@@ -97,4 +97,8 @@ export interface AudioContextType {
   setIsPlayerOpen: (open: boolean) => void;
   showLyrics: boolean;
   setShowLyrics: (show: boolean) => void;
+  isCrossfadeEnabled: boolean;
+  setIsCrossfadeEnabled: (enabled: boolean) => void;
+  crossfadeDuration: number;
+  setCrossfadeDuration: (duration: number) => void;
 }

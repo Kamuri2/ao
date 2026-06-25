@@ -1,12 +1,14 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { useAudio } from '../context/AudioContext';
 import { useTheme } from '../context/ThemeContext';
-import { ArrowLeft, Play, Shuffle, Activity } from 'lucide-react';
+import { ArrowLeft, Play, Shuffle, Activity, Clock } from 'lucide-react';
 import CoverImage from '../components/CoverImage';
+import { useDominantColor } from '../hooks/useDominantColor';
 import { Virtuoso } from 'react-virtuoso';
+import { motion } from 'framer-motion';
 
-const SongListItem = React.memo(({ item, isPlaying, onPress, index }: any) => {
+const SongListItem = React.memo(({ item, isPlaying, onPress, index, hideCover }: any) => {
   const { colors } = useTheme();
 
   return (
@@ -18,14 +20,16 @@ const SongListItem = React.memo(({ item, isPlaying, onPress, index }: any) => {
       <div className="w-10 text-center text-sm font-bold opacity-50 group-hover:opacity-100" style={{ color: colors.text }}>
         {isPlaying ? <Activity size={18} color={colors.primary} className="mx-auto" /> : index + 1}
       </div>
-      <CoverImage
-        coverUrl={item.cover || null}
-        audioPath={item.path}
-        hq={true}
-        className="w-12 h-12 rounded-lg ml-2 shadow-sm"
-        placeholderClassName="w-12 h-12 rounded-lg bg-black/10 dark:bg-white/10 ml-2 shadow-sm"
-      />
-      <div className="flex-1 ml-4 flex flex-col justify-center overflow-hidden pr-4">
+      {!hideCover && (
+        <CoverImage
+          coverUrl={item.cover || null}
+          audioPath={item.path}
+          hq={true}
+          className="w-12 h-12 rounded-lg ml-2 shadow-sm"
+          placeholderClassName="w-12 h-12 rounded-lg bg-black/10 dark:bg-white/10 ml-2 shadow-sm"
+        />
+      )}
+      <div className={`flex-1 flex flex-col justify-center overflow-hidden pr-4 ${hideCover ? 'ml-0' : 'ml-4'}`}>
         <span 
           className="text-base font-bold mb-0.5 truncate" 
           style={{ color: isPlaying ? colors.primary : colors.text }}
@@ -48,14 +52,19 @@ const SongListItem = React.memo(({ item, isPlaying, onPress, index }: any) => {
 export default function ListDetailScreen() {
   const { type, id } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
   const { albums, folders, artists, playSound, playWithShuffle, currentSong } = useAudio();
   const { colors } = useTheme();
+
+  const state = location.state as { backgroundLocation?: any };
 
   let dataList: any = null;
   let title = '';
   let subtitle = '';
   let cover: string | null = null;
   let audioPath: string | undefined = undefined;
+
+  const dominantColor = useDominantColor(cover);
 
   const [artistBio, setArtistBio] = useState<string | null>(null);
 
@@ -75,7 +84,7 @@ export default function ListDetailScreen() {
           .catch(() => setArtistBio('Error al obtener la información del artista.'));
       }
     } else {
-      setArtistBio(null);
+      setTimeout(() => setArtistBio(null), 0);
     }
   }, [type, id, artists]);
 
@@ -99,15 +108,6 @@ export default function ListDetailScreen() {
     audioPath = undefined; // Don't fallback to song cover for artists
   }
 
-  if (!dataList) {
-    return (
-      <div className="flex-1 flex flex-col items-center justify-center h-full">
-        <p className="text-xl font-bold mb-4" style={{ color: colors.text }}>No se encontró el elemento.</p>
-        <button onClick={() => navigate(-1)} className="px-6 py-2 rounded-full font-bold" style={{ backgroundColor: colors.primary, color: '#000' }}>Volver</button>
-      </div>
-    );
-  }
-
   const artistAlbums = useMemo(() => {
     return type === 'artist' && title
       ? Object.values(albums).filter((a: any) => a.artist === title && a.name !== 'Desconocido')
@@ -115,6 +115,7 @@ export default function ListDetailScreen() {
   }, [type, title, albums]);
 
   const displayList = useMemo(() => {
+    if (!dataList) return [];
     if (type !== 'artist') return dataList;
     const albumSongIds = new Set(artistAlbums.flatMap((a: any) => a.songs.map((s: any) => s.id)));
     return dataList.filter((s: any) => !albumSongIds.has(s.id));
@@ -122,47 +123,69 @@ export default function ListDetailScreen() {
 
   const initialTopMostItemIndex = useMemo(() => {
     return Math.max(0, displayList.findIndex((s: any) => s.id === currentSong?.id));
-  }, [type, id]); // Only run when changing routes
+  }, [type, id, displayList, currentSong]); // Only run when changing routes
 
   const [scrollParent, setScrollParent] = useState<HTMLElement | null>(null);
+
   useEffect(() => {
-    setScrollParent(document.getElementById('main-scroll-container'));
+    setTimeout(() => {
+      const el = document.getElementById('main-scroll-container');
+      if (el) setScrollParent(el);
+    }, 0);
   }, []);
+
+  if (!dataList) {
+    return (
+      <div className="flex-1 flex flex-col items-center justify-center h-full w-full">
+        <p className="text-xl font-bold mb-4" style={{ color: colors.text }}>No se encontró el elemento.</p>
+        <button onClick={() => navigate(-1)} className="px-6 py-2 rounded-full font-bold" style={{ backgroundColor: colors.primary, color: '#000' }}>Volver</button>
+      </div>
+    );
+  }
 
   const totalDuration = dataList.reduce((acc: number, song: any) => acc + (song.duration || 0), 0);
   const formatDuration = (seconds: number) => {
     const h = Math.floor(seconds / 3600);
     const m = Math.floor((seconds % 3600) / 60);
-    if (h > 0) return `${h} h ${m} min`;
-    return `${m} min`;
+    const s = Math.floor(seconds % 60);
+    return h > 0 ? `${h}h ${m}m ${s}s` : `${m}m ${s}s`;
+  };
+
+  const handleBack = () => {
+    navigate(-1);
   };
 
   return (
-    <div className="flex-1 min-h-screen pb-24 flex flex-col animate-fade-in relative z-0">
+    <motion.div 
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ type: "tween", duration: 0.3, ease: "easeOut" }}
+      className="flex-1 w-full pb-24 flex flex-col" 
+    >
       {/* Dynamic Background */}
-      <div className="absolute top-0 left-0 right-0 h-[500px] overflow-hidden -z-10 select-none pointer-events-none">
-        <CoverImage 
-          coverUrl={cover}
-          audioPath={audioPath}
-          hq={true}
-          className="w-full h-full object-cover opacity-30 blur-[80px] transform scale-125"
-        />
-        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-[var(--bg-color-70)] to-[var(--bg-color)]" style={{
-          '--bg-color': colors.background,
-          '--bg-color-70': `${colors.background}B3`
-        } as React.CSSProperties} />
-      </div>
+      <motion.div 
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 0.1, duration: 0.5 }}
+        className="absolute top-0 left-0 right-0 h-[600px] -z-10 select-none pointer-events-none transition-colors duration-1000"
+        style={{
+          background: `linear-gradient(to bottom, ${dominantColor || colors.card} 0%, ${colors.background} 100%)`
+        }}
+      />
 
       {/* Header Section (Spotify Style) */}
       <div className="relative pt-20 pb-8 px-8 flex flex-col md:flex-row items-end">
         <div className="absolute top-6 left-6 z-10">
-          <button onClick={() => navigate(-1)} className="p-2 rounded-full bg-black/20 hover:bg-black/40 text-white transition-colors backdrop-blur-md">
+          <button onClick={handleBack} className="p-2 rounded-full bg-black/20 hover:bg-black/40 text-white transition-colors backdrop-blur-md">
             <ArrowLeft size={24} />
           </button>
         </div>
         
         {/* Cover */}
-        <div className="w-52 h-52 md:w-64 md:h-64 shadow-[0_20px_50px_rgba(0,0,0,0.5)] rounded-2xl overflow-hidden flex-shrink-0 z-10 mt-8 md:mt-0">
+        <div 
+          className="w-64 h-64 md:w-[320px] md:h-[320px] shadow-[0_4px_60px_rgba(0,0,0,0.5)] overflow-hidden flex-shrink-0 z-10 mt-8 md:mt-0 rounded-2xl"
+        >
           <CoverImage 
             coverUrl={cover} 
             audioPath={audioPath}
@@ -174,7 +197,7 @@ export default function ListDetailScreen() {
         </div>
 
         {/* Text Details */}
-        <div className="mt-6 md:mt-0 md:ml-8 flex flex-col z-10 flex-1 w-full justify-end h-full">
+        <div className="mt-6 md:mt-0 md:ml-8 flex flex-col z-10 flex-1 justify-end h-full">
           <span className="text-sm font-bold uppercase tracking-widest mb-2" style={{ color: colors.text }}>{type === 'album' ? 'Álbum' : type === 'folder' ? 'Carpeta' : 'Artista'}</span>
           <h1 className="text-5xl md:text-8xl font-black text-wrap mb-6 tracking-tighter" style={{ color: colors.text, textShadow: '0 4px 12px rgba(0,0,0,0.1)' }}>{title}</h1>
           <div className="flex flex-row items-center flex-wrap gap-2 text-sm md:text-base font-bold opacity-90" style={{ color: colors.text }}>
@@ -269,29 +292,39 @@ export default function ListDetailScreen() {
       )}
 
       {/* Track List */}
-      <div className="flex-1">
-        {type === 'artist' && (
-          <h2 className="px-8 text-2xl font-bold mb-4" style={{ color: colors.text }}>
-            {displayList.length > 0 ? "Canciones Sueltas" : ""}
-          </h2>
+      {/* Track List Header (Spotify Style) */}
+      <div className="flex-1 flex flex-col">
+        {displayList.length > 0 && (
+          <div className="px-8 mb-4">
+            <div className="flex flex-row items-center px-3 py-2 border-b border-white/10 text-sm font-bold opacity-70" style={{ color: colors.text }}>
+              <div className="w-10 text-center">#</div>
+              <div className="flex-1 ml-4">Título</div>
+              <div className="mr-4"><Clock size={16} /></div>
+            </div>
+          </div>
         )}
+
         {displayList.length > 0 && scrollParent && (
           <Virtuoso
             customScrollParent={scrollParent}
             data={displayList}
             initialTopMostItemIndex={initialTopMostItemIndex}
             className="px-8"
+            components={{
+              Footer: () => <div style={{ height: '120px' }} />
+            }}
             itemContent={(index, song) => (
               <SongListItem 
                 item={song} 
                 index={index} 
                 isPlaying={currentSong?.id === song.id}
                 onPress={() => playSound(song, `${type}:${id}`, displayList)}
+                hideCover={type === 'album'}
               />
             )}
           />
         )}
       </div>
-    </div>
+    </motion.div>
   );
 }

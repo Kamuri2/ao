@@ -30,12 +30,16 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [duration, setDuration] = useState(0);
 
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const secondaryAudioRef = useRef<HTMLAudioElement | null>(null);
   const queueRef = useRef<Song[]>([]);
   const currentQueueIndex = useRef(-1);
   const originalQueueRef = useRef<Song[]>([]);
   const repeatModeRef = useRef(repeatMode);
   const isShuffleRef = useRef(isShuffle);
   const currentContextIdRef = useRef(currentContextId);
+  const isCrossfadingRef = useRef(false);
+  const crossfadeTimerRef = useRef<any>(null);
+  const crossfadeDurationRef = useRef(3);
 
   useEffect(() => { repeatModeRef.current = repeatMode; }, [repeatMode]);
   useEffect(() => { isShuffleRef.current = isShuffle; }, [isShuffle]);
@@ -44,20 +48,62 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [isScanning, setIsScanning] = useState(false);
   const [isPlayerOpen, setIsPlayerOpen] = useState(false);
   const [showLyrics, setShowLyrics] = useState(false);
+  const [isCrossfadeEnabled, setIsCrossfadeEnabledState] = useState(true);
+  const isCrossfadeEnabledRef = useRef(isCrossfadeEnabled);
+  useEffect(() => { isCrossfadeEnabledRef.current = isCrossfadeEnabled; }, [isCrossfadeEnabled]);
 
-  useEffect(() => {
-    const audio = new Audio();
+  const setIsCrossfadeEnabled = (enabled: boolean) => {
+    setIsCrossfadeEnabledState(enabled);
+    localStorage.setItem('@crossfade_enabled', enabled.toString());
+  };
+
+  const [crossfadeDuration, setCrossfadeDurationState] = useState(3);
+  useEffect(() => { crossfadeDurationRef.current = crossfadeDuration; }, [crossfadeDuration]);
+
+  const setCrossfadeDuration = (duration: number) => {
+    setCrossfadeDurationState(duration);
+    localStorage.setItem('@crossfade_duration', duration.toString());
+  };
+
+  const attachListeners = (audio: HTMLAudioElement) => {
     audio.onplay = () => setIsPlaying(true);
     audio.onpause = () => setIsPlaying(false);
     audio.onended = () => handleTrackEnded();
     audio.ontimeupdate = () => {
       setProgress(audio.currentTime);
       setDuration(audio.duration || 0);
+
+      const CROSSFADE_DURATION = crossfadeDurationRef.current;
+      if (
+        audio.duration && 
+        audio.duration - audio.currentTime <= CROSSFADE_DURATION && 
+        !isCrossfadingRef.current && 
+        queueRef.current.length > 0 && 
+        repeatModeRef.current !== 'track'
+      ) {
+        startCrossfade();
+      }
     };
     audio.onloadedmetadata = () => {
       setDuration(audio.duration || 0);
     };
+  };
+
+  const clearListeners = (audio: HTMLAudioElement) => {
+    audio.onplay = null;
+    audio.onpause = null;
+    audio.onended = null;
+    audio.ontimeupdate = null;
+    audio.onloadedmetadata = null;
+  };
+
+  useEffect(() => {
+    const audio = new Audio();
+    const secondaryAudio = new Audio();
+    attachListeners(audio);
+    
     audioRef.current = audio;
+    secondaryAudioRef.current = secondaryAudio;
 
     const loadPlaylists = () => {
       const stored = localStorage.getItem('@playlists');
@@ -69,11 +115,17 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           }
           setPlaylists(parsed);
         } catch (e) {
-          setPlaylists([{ id: 'favorites', name: 'Me Gusta', songIds: [] }]);
+          console.error("Error loading playlists", e);
         }
       } else {
         setPlaylists([{ id: 'favorites', name: 'Me Gusta', songIds: [] }]);
       }
+
+      const cf = localStorage.getItem('@crossfade_enabled');
+      if (cf !== null) setIsCrossfadeEnabledState(cf === 'true');
+
+      const cd = localStorage.getItem('@crossfade_duration');
+      if (cd !== null) setCrossfadeDurationState(Number(cd));
     };
     loadPlaylists();
 
@@ -156,12 +208,96 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     fetchArtistImages();
   };
 
+  const startCrossfade = () => {
+    let nextIndex = currentQueueIndex.current + 1;
+    let nextSong: Song | null = null;
+    
+    if (nextIndex < queueRef.current.length) {
+      nextSong = queueRef.current[nextIndex];
+    } else if (repeatModeRef.current === 'queue' && queueRef.current.length > 0) {
+      nextIndex = 0;
+      nextSong = queueRef.current[0];
+    }
+    
+    if (!nextSong || !audioRef.current || !secondaryAudioRef.current) return;
+
+    const primary = audioRef.current;
+    const secondary = secondaryAudioRef.current;
+    
+    // UI update immediately (separa la interfaz del audio)
+    currentQueueIndex.current = nextIndex;
+    setQueuePosition(nextIndex + 1);
+    setCurrentSong(nextSong);
+    loadMetadataForSong(nextSong);
+
+    if (!isCrossfadeEnabledRef.current) {
+      // Cambio instantáneo sin desvanecimiento
+      clearListeners(primary); // Prevent onpause firing
+      primary.pause();
+      primary.onended = null;
+      primary.volume = 1;
+      
+      secondary.src = nextSong.uri;
+      secondary.volume = 1;
+      
+      audioRef.current = secondary;
+      secondaryAudioRef.current = primary;
+      
+      attachListeners(audioRef.current);
+      audioRef.current.play().catch(e => console.error("Play error", e));
+      return;
+    }
+
+    isCrossfadingRef.current = true;
+    secondary.src = nextSong.uri;
+    secondary.volume = 0;
+    secondary.play().catch(e => console.error("Crossfade error", e));
+
+    const CROSSFADE_DURATION = crossfadeDurationRef.current;
+    const steps = Math.max(10, CROSSFADE_DURATION * 10);
+    const intervalTime = (CROSSFADE_DURATION * 1000) / steps;
+    let currentStep = 0;
+
+    // Prevent natural end trigger
+    primary.onended = null;
+
+    if (crossfadeTimerRef.current) clearInterval(crossfadeTimerRef.current);
+    
+    crossfadeTimerRef.current = setInterval(() => {
+      currentStep++;
+      const fraction = currentStep / steps;
+      
+      if (primary) primary.volume = Math.max(0, 1 - fraction);
+      if (secondary) secondary.volume = Math.min(1, fraction);
+
+      if (currentStep >= steps) {
+        clearInterval(crossfadeTimerRef.current);
+        crossfadeTimerRef.current = null;
+        
+        clearListeners(primary); // Prevent onpause firing
+        primary.pause();
+        primary.volume = 1;
+        
+        // Swap references
+        audioRef.current = secondary;
+        secondaryAudioRef.current = primary;
+        
+        attachListeners(audioRef.current);
+        setIsPlaying(true); // Ensure UI shows playing, since onplay won't fire for an already playing track
+        
+        isCrossfadingRef.current = false;
+      }
+    }, intervalTime);
+  };
+
   const handleTrackEnded = () => {
     if (repeatModeRef.current === 'track') {
       audioRef.current!.currentTime = 0;
       audioRef.current!.play();
     } else {
-      playNext();
+      if (!isCrossfadingRef.current) {
+        playNext();
+      }
     }
   };
 
@@ -280,6 +416,20 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   };
 
   const playSound = async (song: Song, contextId?: string, contextList?: Song[], forceShuffle?: boolean, rebuildQueue: boolean = true) => {
+    if (isCrossfadingRef.current && crossfadeTimerRef.current) {
+      clearInterval(crossfadeTimerRef.current);
+      crossfadeTimerRef.current = null;
+      isCrossfadingRef.current = false;
+      if (secondaryAudioRef.current) {
+        secondaryAudioRef.current.pause();
+        secondaryAudioRef.current.volume = 1;
+      }
+      if (audioRef.current) {
+        audioRef.current.volume = 1;
+        attachListeners(audioRef.current);
+      }
+    }
+
     if (rebuildQueue) {
       let targetList = contextList && contextList.length > 0 ? contextList : songs;
       let targetContextId = contextId || 'all';
@@ -326,6 +476,29 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   const pauseOrResumeSound = async () => {
     if (!audioRef.current) return;
+    
+    if (isCrossfadingRef.current && crossfadeTimerRef.current) {
+       // Si el usuario pausa durante el crossfade, pausamos ambos
+       if (isPlaying) {
+         audioRef.current.pause();
+         secondaryAudioRef.current?.pause();
+         setIsPlaying(false);
+         // Para simplificar, cancelamos el crossfade y avanzamos directo
+         clearInterval(crossfadeTimerRef.current);
+         crossfadeTimerRef.current = null;
+         isCrossfadingRef.current = false;
+         audioRef.current.volume = 1;
+         
+         const secondary = secondaryAudioRef.current!;
+         secondary.volume = 1;
+         audioRef.current = secondary;
+         secondaryAudioRef.current = audioRef.current; // old primary
+         attachListeners(audioRef.current);
+         clearListeners(secondaryAudioRef.current);
+       }
+       return;
+    }
+
     if (isPlaying) {
       audioRef.current.pause();
     } else {
@@ -425,7 +598,8 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       loadSongsFromUri, queue, queuePosition, queueLength, reorderQueue,
       toggleFavorite, isFavorite, repeatMode, toggleRepeatMode, isShuffle,
       toggleShuffle, changeMusicFolder, isPlayerOpen, setIsPlayerOpen,
-      showLyrics, setShowLyrics
+      showLyrics, setShowLyrics, isCrossfadeEnabled, setIsCrossfadeEnabled,
+      crossfadeDuration, setCrossfadeDuration
     }}>
       {children}
     </AudioContext.Provider>
