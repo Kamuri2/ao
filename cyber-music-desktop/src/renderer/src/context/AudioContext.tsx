@@ -144,10 +144,13 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
   }, []);
 
-  const buildLists = (formattedSongs: Song[]) => {
+  const buildLists = async (formattedSongs: Song[]) => {
     let albumsObj: Record<string, Album> = {};
     let foldersObj: Record<string, Folder> = {};
     let artistsObj: Record<string, Artist> = {};
+    
+    // Pre-load the artist image cache to prevent flickering
+    const artistCache = await window.api.getArtistCache();
 
     formattedSongs.forEach(song => {
       let fName = song.folder || 'Desconocido';
@@ -159,7 +162,14 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       albumsObj[aName].songs.push(song);
 
       let artName = song.artist || 'Desconocido';
-      if (!artistsObj[artName]) artistsObj[artName] = { name: artName, cover: song.cover || null, songs: [] };
+      if (!artistsObj[artName]) {
+        const normName = artName.trim().toLowerCase();
+        let coverUrl = song.cover || null;
+        if (artistCache && artistCache[normName]) {
+          coverUrl = artistCache[normName];
+        }
+        artistsObj[artName] = { name: artName, cover: coverUrl, songs: [] };
+      }
       artistsObj[artName].songs.push(song);
     });
 
@@ -201,8 +211,6 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
             [name]: { ...prev[name], cover: url }
           }));
         }
-        // Small delay to be polite to APIs and avoid rate limits
-        await new Promise(r => setTimeout(r, 200));
       }
     };
     fetchArtistImages();

@@ -9,7 +9,8 @@ const api = {
   readMusicFiles: (folderPath: string) => ipcRenderer.invoke('fs:readMusicFiles', folderPath),
   getMetadata: (filePath: string) => ipcRenderer.invoke('fs:getMetadata', filePath),
   getCover: (filePath: string) => ipcRenderer.invoke('fs:getCover', filePath),
-  getArtistImage: (artistName: string) => ipcRenderer.invoke('api:getArtistImage', artistName)
+  getArtistImage: (artistName: string) => ipcRenderer.invoke('api:getArtistImage', artistName),
+  getArtistCache: () => ipcRenderer.invoke('api:getArtistCache')
 }
 // Use `contextBridge` APIs to expose Electron APIs to
 // renderer only if context isolation is enabled, otherwise

@@ -4,7 +4,10 @@ import util from 'util';
 
 const execFilePromise = util.promisify(execFile);
 import fs from 'fs/promises';
+import { existsSync } from 'fs';
 import path from 'path';
+import crypto from 'crypto';
+import { pathToFileURL } from 'url';
 import * as mm from 'music-metadata';
 import ffmpeg from 'fluent-ffmpeg';
 import ffmpegStatic from 'ffmpeg-static';
@@ -148,6 +151,13 @@ class LRUCache<K, V> {
 const coverCache = new LRUCache<string, string | null>(500);
 const pendingCovers = new Map<string, Promise<string | null>>();
 
+  const coversDir = path.join(app.getPath('userData'), 'covers');
+  try {
+    if (!existsSync(coversDir)) {
+      fs.mkdir(coversDir, { recursive: true }).catch(() => {});
+    }
+  } catch(e) {}
+
 export function setupIpc() {
   ipcMain.handle('dialog:openDirectory', async () => {
     const { canceled, filePaths } = await dialog.showOpenDialog({
@@ -175,6 +185,15 @@ export function setupIpc() {
     const cached = coverCache.get(filePath);
     if (cached !== undefined) return cached;
     
+    const hash = crypto.createHash('md5').update(filePath).digest('hex');
+    const cachedFilePath = path.join(coversDir, `${hash}.jpg`);
+
+    if (existsSync(cachedFilePath)) {
+      const fileUrl = pathToFileURL(cachedFilePath).href;
+      coverCache.set(filePath, fileUrl);
+      return fileUrl;
+    }
+
     if (pendingCovers.has(filePath)) {
       return pendingCovers.get(filePath);
     }
@@ -223,6 +242,23 @@ export function setupIpc() {
           } catch(e) {}
         }
         
+        if (coverBase64) {
+          try {
+            if (coverBase64.startsWith('data:')) {
+              const base64Data = coverBase64.replace(/^data:image\/\w+;base64,/, "");
+              const buffer = Buffer.from(base64Data, 'base64');
+              await fs.writeFile(cachedFilePath, buffer);
+            } else if (coverBase64.startsWith('http')) {
+              const response = await fetch(coverBase64);
+              const arrayBuffer = await response.arrayBuffer();
+              await fs.writeFile(cachedFilePath, Buffer.from(arrayBuffer));
+            }
+            coverBase64 = pathToFileURL(cachedFilePath).href;
+          } catch (e) {
+            console.error("Failed to write persistent cover cache", e);
+          }
+        }
+
         coverCache.set(filePath, coverBase64);
         pendingCovers.delete(filePath);
         return coverBase64;
@@ -402,6 +438,16 @@ export function setupIpc() {
     }
   });
 
+  ipcMain.handle('api:getArtistCache', async () => {
+    const cachePath = path.join(app.getPath('userData'), 'artistImagesCache_v2.json');
+    try {
+      const data = await fs.readFile(cachePath, 'utf8');
+      return JSON.parse(data);
+    } catch (e) {
+      return {};
+    }
+  });
+
   ipcMain.handle('api:getArtistImage', async (_, artistName: string) => {
     if (!artistName || artistName === 'Desconocido') return null;
     const cachePath = path.join(app.getPath('userData'), 'artistImagesCache_v2.json');
@@ -420,6 +466,9 @@ export function setupIpc() {
     if (cache.hasOwnProperty(normalizedName)) {
       return cache[normalizedName];
     }
+
+    // Delay to be polite to APIs ONLY when actually making a network request
+    await new Promise(r => setTimeout(r, 300));
 
     const downloadImage = async (url: string, artistName: string) => {
       try {
