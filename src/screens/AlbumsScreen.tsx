@@ -8,44 +8,47 @@ import GlassContainer from '../components/GlassContainer';
 import CoverImage from '../components/CoverImage';
 import { Album } from '../types';
 
-export default function AlbumsScreen() {
-  const { colors } = useTheme();
+export default function AlbumsScreen({ navigation }: any) {
+  const { colors, isDarkMode } = useTheme();
   const { albums, currentSong } = useAudio();
   const insets = useSafeAreaInsets();
 
   const albumsList = Object.values(albums);
 
+  const renderItem = React.useCallback(({ item }: ListRenderItemInfo<Album>) => (
+    <TouchableOpacity 
+      style={styles.albumCard}
+      onPress={() => navigation.navigate('FolderDetail', { folderName: item.name, isAlbum: true })}
+    >
+      <CoverImage
+        coverUrl={item.cover}
+        style={styles.cover}
+        placeholderStyle={[styles.placeholderCover, { backgroundColor: colors.card }]}
+        hq={true}
+        audioUri={item.songs?.[0]?.uri}
+      />
+      <View style={styles.info}>
+        <Text style={[styles.albumName, { color: colors.text }]} numberOfLines={1}>{item.name}</Text>
+        <Text style={[styles.artistName, { color: colors.subText }]} numberOfLines={1}>{item.artist}</Text>
+        <Text style={[styles.songCount, { color: colors.subText }]} numberOfLines={1}>{item.songs.length} canciones</Text>
+      </View>
+    </TouchableOpacity>
+  ), [navigation, colors]);
+
   if (albumsList.length === 0) {
     return (
       <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+        <Text style={[styles.headerTitle, { color: colors.text, marginTop: insets.top + 10 }]}>Albums</Text>
         <View style={styles.emptyContainer}>
           <Text style={[styles.emptyText, { color: colors.text }]}>No hay álbumes cargados.</Text>
-          <Text style={[styles.emptySubText, { color: colors.subText }]}>Ve a Inicio y selecciona una carpeta con música.</Text>
         </View>
       </SafeAreaView>
     );
   }
 
-  const renderItem = ({ item }: ListRenderItemInfo<Album>) => (
-    <TouchableOpacity style={[styles.albumCard, { borderColor: colors.border, backgroundColor: colors.card }]}>
-      <GlassContainer style={styles.glass} intensity={40}>
-        <CoverImage
-          coverUrl={item.cover}
-          style={styles.cover}
-          placeholderStyle={styles.placeholderCover}
-        />
-        <View style={styles.info}>
-          <Text style={[styles.albumName, { color: colors.text }]} numberOfLines={1}>{item.name}</Text>
-          <Text style={styles.artistName} numberOfLines={1}>{item.artist}</Text>
-          <Text style={styles.songCount}>{item.songs.length} canciones</Text>
-        </View>
-      </GlassContainer>
-    </TouchableOpacity>
-  );
-
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
-      <Text style={[styles.headerTitle, { color: colors.primary }]}>Álbumes</Text>
+      <Text style={[styles.headerTitle, { color: colors.text, marginTop: insets.top + 10 }]}>Albums</Text>
       <FlatList
         data={albumsList}
         keyExtractor={(item) => item.name}
@@ -65,18 +68,16 @@ export default function AlbumsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F5F5F5',
   },
   headerTitle: {
-    color: '#30c296',
-    fontSize: 28,
-    fontWeight: 'bold',
-    marginHorizontal: 20,
-    marginTop: 40,
+    fontSize: 36,
+    fontWeight: '900',
+    textTransform: 'capitalize',
+    letterSpacing: 1,
+    paddingHorizontal: 20,
+    textAlign: 'left',
+    marginTop: 20,
     marginBottom: 20,
-
-
-
   },
   emptyContainer: {
     flex: 1,
@@ -85,68 +86,56 @@ const styles = StyleSheet.create({
     padding: 20,
   },
   emptyText: {
-    color: '#000000',
     fontSize: 18,
     fontWeight: 'bold',
     marginBottom: 10,
   },
   emptySubText: {
-    color: '#000000',
     fontSize: 14,
     textAlign: 'center',
   },
   listContainer: {
     paddingBottom: 100,
     paddingHorizontal: 10,
+    maxWidth: 800,
+    alignSelf: 'center',
+    width: '100%',
   },
   columnWrapper: {
     justifyContent: 'space-between',
     paddingHorizontal: 10,
   },
   albumCard: {
-    borderWidth: 2,
-    borderColor: '#1c764dff',
-    borderRadius: 8,
-
-    width: '48%',
-    aspectRatio: 0.8,
-    marginBottom: 15,
-  },
-  glass: {
-    flex: 1,
-    borderRadius: 8,
+    width: '47%',
+    marginBottom: 20,
   },
   cover: {
     width: '100%',
     aspectRatio: 1,
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
+    borderRadius: 16,
   },
   placeholderCover: {
     width: '100%',
     aspectRatio: 1,
-    backgroundColor: '#FFFFFF',
     justifyContent: 'center',
     alignItems: 'center',
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
+    borderRadius: 16,
   },
   info: {
-    padding: 10,
+    marginTop: 8,
+    paddingHorizontal: 4,
   },
   albumName: {
-    color: '#000000',
-    fontSize: 14,
+    fontSize: 16,
     fontWeight: 'bold',
   },
   artistName: {
-    color: '#000000',
-    fontSize: 12,
+    fontSize: 13,
     marginTop: 2,
+    fontWeight: '500',
   },
   songCount: {
-    color: '#30c296',
-    fontSize: 10,
-    marginTop: 5,
+    fontSize: 12,
+    marginTop: 2,
   },
 });

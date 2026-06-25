@@ -1,0 +1,9 @@
+{
+  "platforms": ["apple", "android", "web"],
+  "apple": {
+    "modules": ["ExpoMusicScannerModule"]
+  },
+  "android": {
+    "modules": ["expo.modules.musicscanner.ExpoMusicScannerModule"]
+  }
+}

@@ -1,24 +1,32 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { useAudio } from '../context/AudioContext';
+import TrackPlayer, { State, usePlaybackState } from 'react-native-track-player';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../context/ThemeContext';
 import CoverImage from './CoverImage';
+import { BlurView } from 'expo-blur';
 
 type RootStackParamList = {
   Player: undefined;
 };
 
-export default function MiniPlayer() {
-  const { currentSong, isPlaying, pauseOrResumeSound, playNext, playPrevious, metadata } = useAudio();
+type MiniPlayerProps = {
+  currentRoute?: string;
+};
+
+export default function MiniPlayer({ currentRoute }: MiniPlayerProps) {
+  const { currentSong, pauseOrResumeSound, playNext, metadata } = useAudio();
+  const playbackState = usePlaybackState();
+  const isPlaying = playbackState.state === State.Playing;
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const insets = useSafeAreaInsets();
-  const { colors } = useTheme();
+  const { colors, isDarkMode } = useTheme();
 
-  if (!currentSong) return null;
+  if (!currentSong || currentRoute === 'Settings' || currentRoute === 'Player') return null;
 
   return (
     <View style={[styles.wrapper, { bottom: 65 + insets.bottom }]}>
@@ -27,44 +35,44 @@ export default function MiniPlayer() {
         onPress={() => navigation.navigate('Player')}
         style={styles.touchable}
       >
-        <View style={[styles.container, { backgroundColor: colors.card, borderColor: colors.border }]}>
+        <BlurView 
+          intensity={60} 
+          tint={isDarkMode ? 'dark' : 'light'} 
+          style={[styles.container, { borderColor: isDarkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)' }]}
+        >
           <View style={styles.content}>
             <CoverImage 
               coverUrl={metadata.cover} 
-              style={[styles.coverImage, { borderColor: colors.border }]} 
-              placeholderStyle={[styles.placeholderCover, { backgroundColor: colors.card, borderColor: colors.border }]} 
+              style={styles.coverImage} 
+              placeholderStyle={[styles.placeholderCover, { backgroundColor: 'transparent' }]} 
+              hq={true}
+              audioUri={currentSong.uri}
             />
 
             <View style={styles.info}>
-              <Text style={[styles.title, { color: colors.text }]} numberOfLines={1}>
-                {currentSong.filename}
-              </Text>
+              <Text style={[styles.title, { color: colors.text }]} numberOfLines={1}>{currentSong.title || currentSong.filename}</Text>
               <Text style={[styles.subtitle, { color: colors.subText }]} numberOfLines={1}>
                 {currentSong.artist || 'Desconocido'}
               </Text>
             </View>
 
-            <View style={styles.controlsRow}>
-              <TouchableOpacity style={styles.sideButton} onPress={(e) => { e.stopPropagation(); playPrevious(); }}>
-                <Ionicons name="play-skip-back" size={24} color={colors.text} />
-              </TouchableOpacity>
-              
+            <View style={styles.controlsRow}>              
               <TouchableOpacity 
-                style={[styles.playButton, { backgroundColor: colors.primary, borderColor: colors.border }]} 
+                style={[styles.playButton]} 
                 onPress={(e) => {
                   e.stopPropagation();
                   pauseOrResumeSound();
                 }}
               >
-                <Ionicons name={isPlaying ? "pause" : "play"} size={24} color="#000000" style={{ marginLeft: isPlaying ? 0 : 2 }} />
+                <Ionicons name={isPlaying ? "pause" : "play"} size={26} color={colors.text} style={{ marginLeft: isPlaying ? 0 : 2 }} />
               </TouchableOpacity>
               
               <TouchableOpacity style={styles.sideButton} onPress={(e) => { e.stopPropagation(); playNext(); }}>
-                <Ionicons name="play-skip-forward" size={24} color={colors.text} />
+                <Ionicons name="play-skip-forward" size={24} color={colors.subText} />
               </TouchableOpacity>
             </View>
           </View>
-        </View>
+        </BlurView>
       </TouchableOpacity>
     </View>
   );
@@ -73,42 +81,42 @@ export default function MiniPlayer() {
 const styles = StyleSheet.create({
   wrapper: {
     position: 'absolute',
-    left: 12,
-    right: 12,
-    height: 70,
-    shadowColor: '#000000',
-    shadowOffset: { width: 4, height: 4 },
-    shadowOpacity: 1,
-    shadowRadius: 0,
-    elevation: 8,
+    left: 10,
+    right: 10,
+    height: 64,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 5,
   },
   touchable: {
     flex: 1,
   },
   container: {
     flex: 1,
-    borderRadius: 8,
-    borderWidth: 2,
+    borderRadius: 14,
+    borderWidth: 1,
+    overflow: 'hidden',
   },
   content: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 8,
+    backgroundColor: 'rgba(0,0,0,0.1)', // Subtle tint over the blur
   },
   coverImage: {
-    width: 50,
-    height: 50,
-    borderRadius: 4,
-    borderWidth: 2,
+    width: 48,
+    height: 48,
+    borderRadius: 8,
   },
   placeholderCover: {
-    width: 50,
-    height: 50,
-    borderRadius: 4,
+    width: 48,
+    height: 48,
+    borderRadius: 8,
     justifyContent: 'center',
     alignItems: 'center',
-    borderWidth: 2,
   },
   info: {
     flex: 1,
@@ -116,13 +124,13 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   title: {
-    fontSize: 16,
-    fontWeight: '900',
+    fontSize: 15,
+    fontWeight: '700',
   },
   subtitle: {
     fontSize: 13,
     marginTop: 2,
-    fontWeight: '700',
+    fontWeight: '500',
   },
   controlsRow: {
     flexDirection: 'row',
@@ -131,13 +139,12 @@ const styles = StyleSheet.create({
     marginRight: 4,
   },
   playButton: {
-    width: 40,
-    height: 40,
+    width: 44,
+    height: 44,
     justifyContent: 'center',
     alignItems: 'center',
-    borderRadius: 20,
-    marginHorizontal: 8,
-    borderWidth: 2,
+    borderRadius: 22,
+    marginHorizontal: 4,
   },
   sideButton: {
     padding: 6,

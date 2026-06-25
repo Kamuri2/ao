@@ -11,7 +11,6 @@ import LyricsView from '../components/LyricsView';
 export default function PlayerScreen() {
   const { colors } = useTheme();
   const [isQueueOpen, setIsQueueOpen] = useState(false);
-  const [showLyrics, setShowLyrics] = useState(false);
   const { 
     currentSong, 
     metadata, 
@@ -28,7 +27,9 @@ export default function PlayerScreen() {
     toggleRepeatMode,
     setIsPlayerOpen,
     currentContextId,
-    playlists
+    playlists,
+    showLyrics,
+    setShowLyrics
   } = useAudio();
 
   if (!currentSong) {

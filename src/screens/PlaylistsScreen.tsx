@@ -6,10 +6,13 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useAudio } from '../context/AudioContext';
 import GlassContainer from '../components/GlassContainer';
 import { Playlist } from '../types';
+import * as ImagePicker from 'expo-image-picker';
+import { Ionicons } from '@expo/vector-icons';
+import CoverImage from '../components/CoverImage';
 
-export default function PlaylistsScreen() {
+export default function PlaylistsScreen({ navigation }: any) {
   const { colors } = useTheme();
-  const { playlists, createPlaylist, deletePlaylist, currentSong } = useAudio();
+  const { playlists, createPlaylist, deletePlaylist, currentSong, updatePlaylistCover } = useAudio();
   const [newPlaylistName, setNewPlaylistName] = useState('');
   const insets = useSafeAreaInsets();
 
@@ -20,16 +23,46 @@ export default function PlaylistsScreen() {
     }
   };
 
+  const pickImage = async (playlistId: string) => {
+    let result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 1,
+    });
+
+    if (!result.canceled && result.assets && result.assets.length > 0) {
+      updatePlaylistCover(playlistId, result.assets[0].uri);
+    }
+  };
+
   const renderItem = ({ item }: ListRenderItemInfo<Playlist>) => (
-    <GlassContainer style={[styles.playlistCard, { borderColor: colors.border, backgroundColor: colors.card }]} intensity={40}>
-      <View style={styles.playlistInfo}>
-        <Text style={[styles.playlistName, { color: colors.text }]}>{item.name}</Text>
-        <Text style={styles.songCount}>{item.songIds.length} canciones</Text>
-      </View>
-      <TouchableOpacity style={styles.deleteBtn} onPress={() => deletePlaylist(item.id)}>
-        <Text style={styles.deleteText}>✕</Text>
-      </TouchableOpacity>
-    </GlassContainer>
+    <TouchableOpacity 
+      activeOpacity={0.8}
+      onPress={() => navigation.navigate('FolderDetail', { folderName: item.id, isPlaylist: true })}
+    >
+      <GlassContainer style={[styles.playlistCard, { borderColor: colors.border, backgroundColor: colors.card }]} intensity={40}>
+        <TouchableOpacity style={styles.coverWrapper} onPress={() => pickImage(item.id)}>
+          <CoverImage 
+            coverUrl={item.cover} 
+            style={styles.playlistCover} 
+            placeholderStyle={[styles.playlistCover, { backgroundColor: colors.background }]} 
+          />
+          <View style={styles.editCoverOverlay}>
+            <Ionicons name="camera" size={20} color="#FFF" />
+          </View>
+        </TouchableOpacity>
+        <View style={styles.playlistInfo}>
+          <Text style={[styles.playlistName, { color: colors.text }]}>{item.name}</Text>
+          <Text style={[styles.songCount, { color: colors.subText }]}>{item.songIds.length} canciones</Text>
+        </View>
+        {item.id !== 'favorites' && (
+          <TouchableOpacity style={[styles.deleteBtn, { backgroundColor: colors.card }]} onPress={() => deletePlaylist(item.id)}>
+            <Ionicons name="trash-outline" size={20} color="#ff4444" />
+          </TouchableOpacity>
+        )}
+      </GlassContainer>
+    </TouchableOpacity>
   );
 
   return (
@@ -128,16 +161,36 @@ const styles = StyleSheet.create({
   listContainer: {
     paddingBottom: 100,
     paddingHorizontal: 20,
+    maxWidth: 800,
+    alignSelf: 'center',
+    width: '100%',
   },
   playlistCard: {
-    borderWidth: 2,
+    borderWidth: 1,
     borderColor: '#000000',
-    borderRadius: 8,
+    borderRadius: 12,
     flexDirection: 'row',
-    padding: 20,
+    padding: 15,
     marginBottom: 15,
     alignItems: 'center',
     justifyContent: 'space-between',
+  },
+  coverWrapper: {
+    marginRight: 15,
+    position: 'relative',
+  },
+  playlistCover: {
+    width: 90,
+    height: 90,
+    borderRadius: 8,
+  },
+  editCoverOverlay: {
+    position: 'absolute',
+    right: -5,
+    bottom: -5,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    borderRadius: 12,
+    padding: 4,
   },
   playlistInfo: {
     flex: 1,
@@ -154,12 +207,6 @@ const styles = StyleSheet.create({
   },
   deleteBtn: {
     padding: 10,
-    backgroundColor: 'rgba(255, 0, 127, 0.1)',
     borderRadius: 8,
-  },
-  deleteText: {
-    color: '#ff007f',
-    fontSize: 18,
-    fontWeight: 'bold',
   },
 });

@@ -1,27 +1,56 @@
 {
   "expo": {
-    "name": "CyberMusic",
-    "slug": "CyberMusic",
+    "name": "A0",
+    "slug": "A0",
     "version": "1.0.0",
-    "orientation": "portrait",
-    "icon": "./assets/icon.png",
+    "orientation": "default",
+    "icon": "./assets/iconono.png",
     "userInterfaceStyle": "light",
+    "splash": {
+      "backgroundColor": "#0a001a",
+      "image": "./assets/iconono.png",
+      "resizeMode": "contain"
+    },
     "ios": {
       "supportsTablet": true
     },
     "android": {
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
-        "foregroundImage": "./assets/android-icon-foreground.png",
-        "backgroundImage": "./assets/android-icon-background.png",
-        "monochromeImage": "./assets/android-icon-monochrome.png"
-      }
+        "backgroundColor": "#121212",
+        "foregroundImage": "./assets/iconono.png"
+      },
+      "package": "com.kevin.cybermusic",
+      "permissions": [
+        "READ_EXTERNAL_STORAGE",
+        "READ_MEDIA_AUDIO",
+        "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.WRITE_EXTERNAL_STORAGE",
+        "android.permission.MODIFY_AUDIO_SETTINGS",
+        "android.permission.READ_MEDIA_VISUAL_USER_SELECTED",
+        "android.permission.ACCESS_MEDIA_LOCATION",
+        "android.permission.READ_MEDIA_IMAGES",
+        "android.permission.READ_MEDIA_VIDEO",
+        "android.permission.READ_MEDIA_AUDIO"
+      ]
     },
     "web": {
       "favicon": "./assets/favicon.png"
     },
     "plugins": [
-      "expo-audio"
-    ]
+      [
+        "expo-media-library",
+        {
+          "photosPermission": "Allow CyberMusic to access your photos.",
+          "savePhotosPermission": "Allow CyberMusic to save photos.",
+          "isAccessMediaLocationEnabled": true
+        }
+      ],
+      "expo-image"
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "7812d62c-68a5-44b5-9ad8-18260b66b09c"
+      }
+    }
   }
 }

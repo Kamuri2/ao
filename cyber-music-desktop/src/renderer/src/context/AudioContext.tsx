@@ -43,6 +43,7 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   const [isScanning, setIsScanning] = useState(false);
   const [isPlayerOpen, setIsPlayerOpen] = useState(false);
+  const [showLyrics, setShowLyrics] = useState(false);
 
   useEffect(() => {
     const audio = new Audio();
@@ -102,7 +103,7 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       foldersObj[fName].songs.push(song);
 
       let aName = song.album || 'Desconocido';
-      if (!albumsObj[aName]) albumsObj[aName] = { name: aName, artist: song.artist || 'Desconocido', cover: song.cover || null, songs: [] };
+      if (!albumsObj[aName]) albumsObj[aName] = { name: aName, artist: song.artist || 'Desconocido', cover: song.cover || null, songs: [], year: song.year };
       albumsObj[aName].songs.push(song);
 
       let artName = song.artist || 'Desconocido';
@@ -112,8 +113,11 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
     Object.values(albumsObj).forEach(album => {
       album.songs.sort((a, b) => {
-        if (a.trackNumber && b.trackNumber && a.trackNumber !== b.trackNumber) {
-          return a.trackNumber - b.trackNumber;
+        const trackA = typeof a.trackNumber === 'number' && a.trackNumber > 0 ? a.trackNumber : 9999;
+        const trackB = typeof b.trackNumber === 'number' && b.trackNumber > 0 ? b.trackNumber : 9999;
+        
+        if (trackA !== trackB) {
+          return trackA - trackB;
         }
         const strA = a.title || a.filename || '';
         const strB = b.title || b.filename || '';
@@ -420,7 +424,8 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       metadataCache: {}, extractMetadataOnDemand, currentContextId,
       loadSongsFromUri, queue, queuePosition, queueLength, reorderQueue,
       toggleFavorite, isFavorite, repeatMode, toggleRepeatMode, isShuffle,
-      toggleShuffle, changeMusicFolder, isPlayerOpen, setIsPlayerOpen
+      toggleShuffle, changeMusicFolder, isPlayerOpen, setIsPlayerOpen,
+      showLyrics, setShowLyrics
     }}>
       {children}
     </AudioContext.Provider>

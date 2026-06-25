@@ -25,9 +25,7 @@ const styles = StyleSheet.create({
   container: {
     borderRadius: 8,
     overflow: 'hidden',
-    borderColor: '#000000',
-    borderWidth: 2,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: 'transparent',
   },
   content: {
     padding: 15,

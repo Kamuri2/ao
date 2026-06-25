@@ -1,114 +1,434 @@
 import React, { createContext, useState, useEffect, useContext } from 'react';
-import { useAudioPlayer, useAudioPlayerStatus, setAudioModeAsync } from 'expo-audio';
+import TrackPlayer, { Event, State, usePlaybackState, useProgress, useTrackPlayerEvents, Capability, RepeatMode, Track } from 'react-native-track-player';
+import * as MediaLibrary from 'expo-media-library';
+import * as FileSystem from 'expo-file-system';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import * as FileSystem from 'expo-file-system/legacy';
-import { Buffer } from 'buffer';
-import { Song, Playlist, Album, Folder, AudioContextType, Metadata } from '../types';
-
-// AudioContext.tsx
+import { setupPlayer } from '../services/TrackPlayerSetup';
+import { Song, Album, Folder, Artist, AudioContextType, Playlist } from '../types';
+import { fetchArtistImage } from '../services/ArtistImageService';
 
 const AudioContext = createContext<AudioContextType | undefined>(undefined);
 
 export const useAudio = (): AudioContextType => {
   const context = useContext(AudioContext);
-  if (!context) {
-    throw new Error('useAudio must be used within an AudioProvider');
-  }
+  if (!context) throw new Error('useAudio must be used within an AudioProvider');
   return context;
 };
 
-interface AudioProviderProps {
-  children: React.ReactNode;
-}
-
-export const AudioProvider: React.FC<AudioProviderProps> = ({ children }) => {
+export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [songs, setSongs] = useState<Song[]>([]);
   const [albums, setAlbums] = useState<Record<string, Album>>({});
   const [folders, setFolders] = useState<Record<string, Folder>>({});
+  const [artists, setArtists] = useState<Record<string, Artist>>({});
+  const [currentSong, setCurrentSong] = useState<Song | null>(null);
+  const [lyrics, setLyrics] = useState<string | null>(null);
+  const [audioDetails, setAudioDetails] = useState<{ bitrate?: number; sampleRate?: number; format?: string } | null>(null);
+  const [isPlayerReady, setIsPlayerReady] = useState(false);
+  const [currentContextId, setCurrentContextId] = useState<string>('all');
+  const [queuePosition, setQueuePosition] = useState(0);
+  const [queueLength, setQueueLength] = useState(0);
+
+  const [repeatMode, setRepeatMode] = useState<'off' | 'track' | 'queue'>('off');
+  const [isShuffle, setIsShuffle] = useState(false);
   const [playlists, setPlaylists] = useState<Playlist[]>([]);
 
-  const [currentSong, setCurrentSong] = useState<Song | null>(null);
-  const [metadata, setMetadata] = useState<{ cover: string | null; lyrics: string | null }>({ cover: null, lyrics: null });
-  const [metadataCache, setMetadataCache] = useState<Record<string, { coverUri: string | null; lyrics: string | null }>>({});
-  const playRequestId = React.useRef<string | null>(null);
+  const playbackState = usePlaybackState();
 
-  // expo-audio API
-  const player = useAudioPlayer(currentSong ? currentSong.uri : null);
-  const status = useAudioPlayerStatus(player);
-
-  const isPlaying = status.playing;
-  const position = status.currentTime;
-  const duration = status.duration;
+  // RNTP mapped to boolean
+  const isPlaying = playbackState.state === State.Playing;
 
   useEffect(() => {
-    loadPlaylists();
-    loadMetadataCache();
-    setupAudio();
+    const init = async () => {
+      const ready = await setupPlayer();
+      setIsPlayerReady(ready);
+
+      try {
+        const ExpoMusicScannerModule = require('../../modules/expo-music-scanner/src/ExpoMusicScannerModule').default;
+        await ExpoMusicScannerModule.initAudioEngine();
+
+        // Load saved EQ and Bass
+        const savedEq = await AsyncStorage.getItem('@eq_levels');
+        if (savedEq) {
+          const parsed = JSON.parse(savedEq);
+          Object.keys(parsed).forEach(bandIdx => {
+            ExpoMusicScannerModule.setEqualizerBandLevel(parseInt(bandIdx), parsed[bandIdx]);
+          });
+        }
+        const savedBass = await AsyncStorage.getItem('@bass_boost');
+        if (savedBass) {
+          ExpoMusicScannerModule.setBassBoost(parseInt(savedBass, 10));
+        }
+      } catch (e) {
+        console.log("Error inicializando motor de audio", e);
+      }
+    };
+    init();
   }, []);
 
-  const loadMetadataCache = async () => {
-    try {
-      const stored = await AsyncStorage.getItem('@metadata_cache');
-      if (stored) setMetadataCache(JSON.parse(stored));
-    } catch (e) { }
-  };
+  useTrackPlayerEvents([Event.PlaybackActiveTrackChanged], async (event) => {
+    if (event.type === Event.PlaybackActiveTrackChanged && event.track) {
+      const matchingSong = songs.find(s => s.id === event.track?.id);
+      if (matchingSong) {
+        const updatedSong = { ...matchingSong, cover: event.track.artwork || matchingSong.cover };
+        setCurrentSong(updatedSong);
 
-  const saveMetadataToCache = async (uri: string, data: { coverUri: string | null; lyrics: string | null }) => {
-    try {
-      setMetadataCache(prev => {
-        const newCache = { ...prev, [uri]: data };
-        AsyncStorage.setItem('@metadata_cache', JSON.stringify(newCache)).catch(() => { });
-        return newCache;
-      });
-    } catch (e) { }
-  };
-
-  const setupAudio = async () => {
-    try {
-      await setAudioModeAsync({
-        playsInSilentMode: true,
-        shouldPlayInBackground: true,
-        shouldRouteThroughEarpiece: false,
-        interruptionMode: 'mixWithOthers',
-      });
-    } catch (e) {
-      console.warn('Failed to set audio mode', e);
-    }
-  };
-
-  // Auto play next song when current finishes
-  useEffect(() => {
-    if (status.didJustFinish) {
-      playNext();
-    }
-  }, [status.didJustFinish]);
-
-  // Auto play when song is ready
-  useEffect(() => {
-    if (currentSong && player && playRequestId.current === currentSong.id) {
-      playRequestId.current = null; // Consume the request
-      if (typeof player.play === 'function') {
-        player.play();
+        // Load lyrics and details natively
+        if (updatedSong.uri) {
+          try {
+            const ExpoMusicScannerModule = require('../../modules/expo-music-scanner/src/ExpoMusicScannerModule').default;
+            const details = await ExpoMusicScannerModule.getSongDetails(updatedSong.uri);
+            if (details) {
+              setLyrics(details.lyrics || null);
+              setAudioDetails({
+                bitrate: details.bitrate,
+                sampleRate: details.sampleRate,
+                format: details.format
+              });
+              if (details.cover) {
+                setCurrentSong(prev => prev ? { ...prev, cover: details.cover } : prev);
+                const currentTrackIndex = await TrackPlayer.getActiveTrackIndex();
+                if (currentTrackIndex !== undefined) {
+                  await TrackPlayer.updateMetadataForTrack(currentTrackIndex, { artwork: details.cover });
+                }
+              }
+            } else {
+              setLyrics(null);
+              setAudioDetails(null);
+            }
+          } catch (e) {
+            setLyrics(null);
+            setAudioDetails(null);
+          }
+        } else {
+          setLyrics(null);
+          setAudioDetails(null);
+        }
       }
     }
-  }, [currentSong, player, status.isLoaded]);
 
-  const loadPlaylists = async () => {
+    // Update queue status
     try {
-      const stored = await AsyncStorage.getItem('@playlists');
-      if (stored !== null) setPlaylists(JSON.parse(stored));
-    } catch (e) {
-      console.error("Error loading playlists", e);
+      const q = await TrackPlayer.getQueue();
+      const idx = await TrackPlayer.getActiveTrackIndex();
+      setQueueLength(q.length);
+      setQueuePosition((idx ?? 0) + 1);
+    } catch (e) { }
+  });
+
+  const loadSongsFromMediaLibrary = async () => {
+
+    try {
+      // Import local module dynamically
+      const ExpoMusicScannerModule = require('../../modules/expo-music-scanner/src/ExpoMusicScannerModule').default;
+
+      let folderPath: string | null = await AsyncStorage.getItem('@music_folder');
+
+      if (!folderPath) {
+        try {
+          // Ask for global media permissions first
+          const mediaPerms = await MediaLibrary.requestPermissionsAsync();
+          
+          if (mediaPerms.granted) {
+            // Wait a tiny bit to prevent Android UI glitch where opening SAF right after MediaLibrary dismisses it
+            await new Promise(resolve => setTimeout(resolve, 500));
+            
+            const permissions = await (FileSystem as any).StorageAccessFramework.requestDirectoryPermissionsAsync();
+            if (permissions.granted) {
+              const uri = permissions.directoryUri;
+              if (uri && uri.includes('primary%3A')) {
+                const pathPart = decodeURIComponent(uri.split('primary%3A')[1]);
+                folderPath = '/storage/emulated/0/' + pathPart;
+              }
+              if (folderPath) {
+                await AsyncStorage.setItem('@music_folder', folderPath);
+              }
+            }
+          } else {
+            console.warn("Media permissions denied");
+          }
+        } catch (e) {
+          console.warn("SAF error", e);
+        }
+      }
+
+      const nativeSongs = await ExpoMusicScannerModule.getAudioFiles(folderPath);
+
+      const formattedSongs: Song[] = nativeSongs.map((asset: any) => ({
+        id: asset.id,
+        uri: asset.uri,
+        filename: asset.filename,
+        folder: asset.folder,
+        duration: asset.duration,
+        title: asset.title,
+        artist: asset.artist,
+        album: asset.album,
+        cover: asset.cover,
+        trackNumber: asset.trackNumber
+      }));
+
+      setSongs(formattedSongs);
+
+      let albumsObj: Record<string, Album> = {};
+      let foldersObj: Record<string, Folder> = {};
+      let artistsObj: Record<string, Artist> = {};
+
+      formattedSongs.forEach(song => {
+        let fName = song.folder || 'Desconocido';
+        if (!foldersObj[fName]) foldersObj[fName] = { name: fName, cover: song.cover || null, songs: [] };
+        foldersObj[fName].songs.push(song);
+
+        let aName = song.album || 'Desconocido';
+        if (!albumsObj[aName]) albumsObj[aName] = { name: aName, artist: song.artist || 'Desconocido', cover: song.cover || null, songs: [] };
+        albumsObj[aName].songs.push(song);
+
+        let artName = song.artist || 'Desconocido';
+        if (!artistsObj[artName]) artistsObj[artName] = { name: artName, cover: song.cover || null, songs: [] };
+        artistsObj[artName].songs.push(song);
+      });
+
+      // Acomoda las canciones de cada álbum de acuerdo a su metadata de orden o alfabéticamente
+      Object.values(albumsObj).forEach(album => {
+        album.songs.sort((a, b) => {
+          if (a.trackNumber && b.trackNumber && a.trackNumber !== b.trackNumber) {
+            return a.trackNumber - b.trackNumber;
+          }
+          const strA = a.title || a.filename || '';
+          const strB = b.title || b.filename || '';
+          return strA.localeCompare(strB);
+        });
+      });
+
+      // Acomoda las canciones de cada carpeta alfabéticamente
+      Object.values(foldersObj).forEach(folder => {
+        folder.songs.sort((a, b) => {
+          const strA = a.title || a.filename || '';
+          const strB = b.title || b.filename || '';
+          return strA.localeCompare(strB);
+        });
+      });
+
+      setAlbums(albumsObj);
+      setFolders(foldersObj);
+      setArtists(artistsObj);
+
+      // Fetch high-quality artist covers in the background
+      Object.values(artistsObj).forEach(async (artist) => {
+        if (artist.name !== 'Desconocido') {
+          const coverUrl = await fetchArtistImage(artist.name);
+          if (coverUrl) {
+            setArtists(prev => {
+              const updated = { ...prev };
+              if (updated[artist.name]) {
+                updated[artist.name] = { ...updated[artist.name], cover: coverUrl };
+              }
+              return updated;
+            });
+          }
+        }
+      });
+
+    } catch (error) {
+      console.error("Error loading songs from native module", error);
     }
   };
 
-  const savePlaylists = async (newPlaylists: Playlist[]) => {
+  const changeMusicFolder = async () => {
     try {
-      setPlaylists(newPlaylists);
-      await AsyncStorage.setItem('@playlists', JSON.stringify(newPlaylists));
+      const permissions = await (FileSystem as any).StorageAccessFramework.requestDirectoryPermissionsAsync();
+      if (permissions.granted) {
+        let folderPath = permissions.directoryUri;
+        if (folderPath && folderPath.includes('primary%3A')) {
+          const pathPart = decodeURIComponent(folderPath.split('primary%3A')[1]);
+          folderPath = '/storage/emulated/0/' + pathPart;
+        }
+        if (folderPath) {
+          await AsyncStorage.setItem('@music_folder', folderPath);
+          await loadSongsFromMediaLibrary();
+        }
+      }
     } catch (e) {
-      console.error("Error saving playlists", e);
+      console.warn("Error changing music folder", e);
     }
+  };
+
+  useEffect(() => {
+    if (isPlayerReady && songs.length > 0) {
+      const loadTracksToPlayer = async () => {
+        try {
+          const currentQueue = await TrackPlayer.getQueue();
+          if (currentQueue.length > 0) {
+            const idx = await TrackPlayer.getActiveTrackIndex();
+            if (idx !== undefined && idx !== null && currentQueue[idx]) {
+               const activeTrack = currentQueue[idx];
+               const savedSong = songs.find(s => s.id === activeTrack.id);
+               if (savedSong && !currentSong) {
+                 setCurrentSong(savedSong);
+                 const savedContext = await AsyncStorage.getItem('@last_context_id');
+                 if (savedContext) setCurrentContextId(savedContext);
+               }
+            }
+            return;
+          }
+
+          const savedSongId = await AsyncStorage.getItem('@last_played_song_id');
+          const savedContextId = await AsyncStorage.getItem('@last_context_id') || 'all';
+
+          const tracks: Track[] = songs.map(s => ({
+            id: s.id,
+            url: s.uri,
+            title: s.title,
+            artist: s.artist,
+            album: s.album,
+            artwork: s.cover,
+            duration: s.duration,
+          }));
+          await TrackPlayer.reset();
+          await TrackPlayer.add(tracks);
+          setCurrentContextId(savedContextId);
+
+          if (savedSongId) {
+             const savedIndex = tracks.findIndex(t => t.id === savedSongId);
+             if (savedIndex !== -1) {
+                await TrackPlayer.skip(savedIndex);
+                setCurrentSong(songs[savedIndex]);
+             }
+          }
+        } catch (e) {
+          console.error("Failed to load tracks to player", e);
+        }
+      };
+      loadTracksToPlayer();
+    }
+  }, [isPlayerReady, songs]);
+
+  useEffect(() => {
+    if (currentSong) {
+      AsyncStorage.setItem('@last_played_song_id', currentSong.id).catch(() => {});
+      AsyncStorage.setItem('@last_context_id', currentContextId).catch(() => {});
+    }
+  }, [currentSong, currentContextId]);
+
+  const playSound = async (song: Song, contextId?: string, contextList?: Song[], forceShuffle?: boolean) => {
+    let targetList = contextList && contextList.length > 0 ? contextList : songs;
+    let targetContextId = contextId || 'all';
+
+    const trackIndex = targetList.findIndex(s => s.id === song.id);
+    const effectiveShuffle = isShuffle || forceShuffle;
+    
+    if (forceShuffle && !isShuffle) {
+      setIsShuffle(true);
+    }
+
+    if (trackIndex !== -1 && isPlayerReady) {
+      if (currentContextId !== targetContextId || effectiveShuffle) {
+        let tracks: Track[] = targetList.map(s => ({
+          id: s.id,
+          url: s.uri,
+          title: s.title,
+          artist: s.artist,
+          album: s.album,
+          artwork: s.cover,
+          duration: s.duration,
+        }));
+
+        if (effectiveShuffle) {
+          // Shuffle tracks but keep the selected song at index 0
+          const selectedTrack = tracks[trackIndex];
+          const otherTracks = tracks.filter((_, i) => i !== trackIndex);
+          for (let i = otherTracks.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [otherTracks[i], otherTracks[j]] = [otherTracks[j], otherTracks[i]];
+          }
+          tracks = [selectedTrack, ...otherTracks];
+        }
+
+        await TrackPlayer.reset();
+        for (let i = 0; i < tracks.length; i += 500) {
+          await TrackPlayer.add(tracks.slice(i, i + 500));
+          if (i + 500 < tracks.length) {
+            await new Promise(r => setTimeout(r, 10));
+          }
+        }
+        
+        setCurrentContextId(targetContextId);
+        if (!effectiveShuffle && trackIndex > 0) {
+          await TrackPlayer.skip(trackIndex);
+        }
+        await TrackPlayer.play();
+        setCurrentSong(song);
+      } else {
+        await TrackPlayer.skip(trackIndex);
+        await TrackPlayer.play();
+        setCurrentSong(song);
+      }
+    }
+  };
+
+  const playWithShuffle = async (contextId?: string, contextList?: Song[]) => {
+    let targetList = contextList && contextList.length > 0 ? contextList : songs;
+    if (targetList.length === 0) return;
+    const randomSong = targetList[Math.floor(Math.random() * targetList.length)];
+    await playSound(randomSong, contextId, targetList, true);
+  };
+
+  const pauseOrResumeSound = async () => {
+    if (isPlaying) await TrackPlayer.pause();
+    else await TrackPlayer.play();
+  };
+
+  const playNext = async () => { await TrackPlayer.skipToNext(); };
+  const playPrevious = async () => { await TrackPlayer.skipToPrevious(); };
+  const seekTo = async (millis: number) => { await TrackPlayer.seekTo(millis / 1000); };
+
+  const extractMetadataOnDemand = async (uri: string) => {
+    const song = songs.find(s => s.uri === uri);
+    if (song) {
+      try {
+        const ExpoMusicScannerModule = require('../../modules/expo-music-scanner/src/ExpoMusicScannerModule').default;
+        const details = await ExpoMusicScannerModule.getSongDetails(uri);
+        return {
+          title: song.title,
+          artist: song.artist,
+          album: song.album,
+          cover: song.cover || null,
+          lyrics: details?.lyrics || null
+        };
+      } catch (e) {
+        return {
+          title: song.title,
+          artist: song.artist,
+          album: song.album,
+          cover: song.cover || null,
+          lyrics: null
+        };
+      }
+    }
+    return { title: null, artist: null, album: null, cover: null, lyrics: null };
+  };
+
+  useEffect(() => {
+    const loadPlaylists = async () => {
+      try {
+        const stored = await AsyncStorage.getItem('@playlists');
+        if (stored) {
+          const parsed = JSON.parse(stored);
+          if (!parsed.find((p: Playlist) => p.id === 'favorites')) {
+            parsed.unshift({ id: 'favorites', name: 'Me Gusta', songIds: [] });
+          }
+          setPlaylists(parsed);
+        } else {
+          setPlaylists([{ id: 'favorites', name: 'Me Gusta', songIds: [] }]);
+        }
+      } catch (e) { }
+    };
+    loadPlaylists();
+  }, []);
+
+  const savePlaylists = async (newPlaylists: import('../types').Playlist[]) => {
+    setPlaylists(newPlaylists);
+    try {
+      await AsyncStorage.setItem('@playlists', JSON.stringify(newPlaylists));
+    } catch (e) { }
   };
 
   const createPlaylist = async (name: string) => {
@@ -116,10 +436,20 @@ export const AudioProvider: React.FC<AudioProviderProps> = ({ children }) => {
     await savePlaylists([...playlists, newPlaylist]);
   };
 
+  const deletePlaylist = async (id: string) => {
+    if (id === 'favorites') return;
+    await savePlaylists(playlists.filter(p => p.id !== id));
+  };
+
   const addSongToPlaylist = async (playlistId: string, songId: string) => {
+    const song = songs.find(s => s.id === songId);
     const updated = playlists.map(p => {
       if (p.id === playlistId && !p.songIds.includes(songId)) {
-        return { ...p, songIds: [...p.songIds, songId] };
+        return {
+          ...p,
+          songIds: [...p.songIds, songId],
+          cover: p.cover ? p.cover : (song?.cover || null)
+        };
       }
       return p;
     });
@@ -136,287 +466,120 @@ export const AudioProvider: React.FC<AudioProviderProps> = ({ children }) => {
     await savePlaylists(updated);
   };
 
-  const deletePlaylist = async (playlistId: string) => {
-    const updated = playlists.filter(p => p.id !== playlistId);
+  const updatePlaylistCover = async (playlistId: string, coverUri: string) => {
+    const updated = playlists.map(p => {
+      if (p.id === playlistId) {
+        return { ...p, cover: coverUri };
+      }
+      return p;
+    });
     await savePlaylists(updated);
   };
 
-  // Extract Metadata ON DEMAND via custom Buffer parsing
-  const extractMetadataOnDemand = async (uri: string): Promise<{ cover: string | null; lyrics: string | null }> => {
-    try {
-      // Leer como string Base64 con un límite de 2MB
-      const dataB64 = await FileSystem.readAsStringAsync(uri, { 
-        encoding: FileSystem.EncodingType.Base64,
-        position: 0,
-        length: 2097152
-      });
-      
-      const buffer = Buffer.from(dataB64, 'base64');
-      
-      let coverUri: string | null = null;
-      let lyricsText: string | null = null;
-
-      try {
-        if (buffer.length >= 10 && buffer[0] === 0x49 && buffer[1] === 0x44 && buffer[2] === 0x33) {
-          const version = buffer[3];
-          const flags = buffer[5];
-          const size = (buffer[6] << 21) | (buffer[7] << 14) | (buffer[8] << 7) | buffer[9];
-
-          let offset = 10;
-          if (flags & 0x40) {
-            if (version === 3) {
-              const extSize = buffer.readUInt32BE(offset);
-              offset += extSize + 4;
-            } else if (version === 4) {
-              const extSize = (buffer[offset] << 21) | (buffer[offset+1] << 14) | (buffer[offset+2] << 7) | buffer[offset+3];
-              offset += extSize;
-            }
-          }
-
-          while (offset < size + 10 && offset < buffer.length) {
-            if (offset + 10 > buffer.length) break;
-            const frameId = buffer.toString('utf8', offset, offset + 4);
-            if (frameId.charCodeAt(0) === 0) break;
-
-            let frameSize = 0;
-            if (version === 3) {
-              frameSize = buffer.readUInt32BE(offset + 4);
-            } else if (version === 4) {
-              frameSize = (buffer[offset + 4] << 21) | (buffer[offset + 5] << 14) | (buffer[offset + 6] << 7) | buffer[offset + 7];
-            } else {
-              break;
-            }
-
-            offset += 10;
-            if (frameSize === 0 || offset + frameSize > buffer.length) break;
-
-            if (frameId === 'APIC') {
-              const textEncoding = buffer[offset];
-              let p = offset + 1;
-              let mimeTypeStart = p;
-              while (p < offset + frameSize && buffer[p] !== 0) p++;
-              let mimeType = buffer.toString('utf8', mimeTypeStart, p);
-              p++; // null byte
-              p++; // picture type
-              
-              if (textEncoding === 1 || textEncoding === 2) {
-                 while (p < offset + frameSize - 1 && (buffer[p] !== 0 || buffer[p+1] !== 0)) p += 2;
-                 p += 2;
-              } else {
-                 while (p < offset + frameSize && buffer[p] !== 0) p++;
-                 p++;
-              }
-
-              const pictureData = buffer.slice(p, offset + frameSize);
-              if (pictureData.length > 0 && !coverUri) {
-                 const base64 = pictureData.toString('base64');
-                 const mime = (mimeType === 'image/' || mimeType === 'image') ? 'image/jpeg' : mimeType;
-                 
-                 // Guardar en caché
-                 const localCoverUri = FileSystem.cacheDirectory + 'cover_' + Math.abs(uri.split('').reduce((a,b)=>{a=((a<<5)-a)+b.charCodeAt(0);return a&a},0)) + '.jpg';
-                 await FileSystem.writeAsStringAsync(localCoverUri, base64, { encoding: FileSystem.EncodingType.Base64 });
-                 coverUri = localCoverUri;
-              }
-            } else if (frameId === 'USLT') {
-              const textEncoding = buffer[offset];
-              let p = offset + 1;
-              p += 3; // lang
-              
-              if (textEncoding === 1 || textEncoding === 2) {
-                 while (p < offset + frameSize - 1 && (buffer[p] !== 0 || buffer[p+1] !== 0)) p += 2;
-                 p += 2;
-              } else {
-                 while (p < offset + frameSize && buffer[p] !== 0) p++;
-                 p++;
-              }
-
-              const lyricsData = buffer.slice(p, offset + frameSize);
-              if (lyricsData.length > 0 && !lyricsText) {
-                 lyricsText = (textEncoding === 1 || textEncoding === 2) ? lyricsData.toString('utf16le') : lyricsData.toString('utf8');
-              }
-            }
-            offset += frameSize;
-          }
-        }
-      } catch (e) {
-        console.log("ID3 parsing error:", e);
-      }
-
-      return { cover: coverUri, lyrics: lyricsText };
-    } catch (e: any) {
-      console.log(`Failed to extract deep metadata for ${uri}`, e.message);
-      return { cover: null, lyrics: null };
-    }
-  };
-
-  const loadSongsFromUri = async (directoryUri: string) => {
-    try {
-      const files = await FileSystem.StorageAccessFramework.readDirectoryAsync(directoryUri);
-      
-      const audioFiles = files.filter(uri => 
-        uri.endsWith('.mp3') || uri.endsWith('.m4a') || uri.endsWith('.flac') || uri.endsWith('.wav')
-      );
-
-      const formattedSongs: Song[] = audioFiles.map((uri, index) => {
-        const decodedUri = decodeURIComponent(uri);
-        const parts = decodedUri.split('/');
-        let filename = parts[parts.length - 1];
-        
-        let parentFolder = "Desconocido";
-        if (parts.length >= 2) {
-            parentFolder = parts[parts.length - 2];
-        }
-
-        if (parentFolder.includes('%3A')) {
-            parentFolder = parentFolder.split('%3A').pop() || 'Raíz';
-        }
-
-        return {
-          id: index.toString(),
-          uri: uri,
-          filename: filename,
-          folder: parentFolder,
-          duration: 0
-        };
-      });
-      
-      setSongs(formattedSongs);
-    } catch (error) {
-      console.error("Error al leer el directorio:", error);
-    }
-  };
-
-  const handleSetSongs = (newSongs: Song[]) => {
-    // 1. Instantly set the songs list with basic filenames
-    let albumsObj: Record<string, Album> = {};
-    let foldersObj: Record<string, Folder> = {};
-
-    const processedSongs = newSongs.map(song => {
-      let cleanFilename = song.filename.replace(/\.[^/.]+$/, "");
-      let title = cleanFilename;
-      let artist = 'Desconocido';
-      let album = 'Desconocido';
-      let folderName = song.folder || 'Desconocido';
-
-      const updatedSong: Song = {
-        ...song,
-        filename: title,
-        cover: metadataCache[song.uri] ? metadataCache[song.uri].coverUri : null,
-        album,
-        artist,
-        lyrics: metadataCache[song.uri] ? metadataCache[song.uri].lyrics : 'Letra no disponible'
-      };
-
-      if (!albumsObj[album]) {
-        albumsObj[album] = { name: album, artist, cover: updatedSong.cover, songs: [] };
-      } else if (!albumsObj[album].cover && updatedSong.cover) {
-        albumsObj[album].cover = updatedSong.cover;
-      }
-      albumsObj[album].songs.push(updatedSong);
-
-      if (!foldersObj[folderName]) {
-        foldersObj[folderName] = { name: folderName, cover: updatedSong.cover, songs: [] };
-      } else if (!foldersObj[folderName].cover && updatedSong.cover) {
-        foldersObj[folderName].cover = updatedSong.cover;
-      }
-      foldersObj[folderName].songs.push(updatedSong);
-
-      return updatedSong;
-    });
-
-    setSongs(processedSongs);
-    setAlbums(albumsObj);
-    setFolders(foldersObj);
-  };
-
-  const playSound = async (song: Song) => {
-    try {
-      setMetadata({ cover: null, lyrics: 'Cargando...' });
-
-      // Update current song. This will trigger useAudioPlayer hook to replace the source
-      playRequestId.current = song.id;
-      setCurrentSong(song);
-
-      // Eliminamos player.play() aquí porque lanza "undefined is not a function" 
-      // si el objeto player aún no se ha instanciado con la nueva fuente en este render.
-      // Un useEffect se encargará de darle play cuando esté listo.
-
-      // Check cache first
-      if (metadataCache[song.uri]) {
-        setMetadata({ cover: metadataCache[song.uri].coverUri, lyrics: metadataCache[song.uri].lyrics });
-        return;
-      }
-
-      // Perform deep extraction ON DEMAND since it's not cached
-      const deepMeta = await extractMetadataOnDemand(song.uri);
-
-      if (deepMeta) {
-        setMetadata(deepMeta);
-        saveMetadataToCache(song.uri, { coverUri: deepMeta.cover, lyrics: deepMeta.lyrics });
-      } else {
-        setMetadata({ cover: null, lyrics: 'No disponible' });
-        saveMetadataToCache(song.uri, { coverUri: null, lyrics: 'No disponible' });
-      }
-
-    } catch (error) {
-      console.error('Error al reproducir audio:', error);
-    }
-  };
-
-  const pauseOrResumeSound = async () => {
-    if (isPlaying) {
-      player.pause();
+  const toggleFavorite = async (songId: string) => {
+    const isFav = isFavorite(songId);
+    if (isFav) {
+      await removeSongFromPlaylist('favorites', songId);
     } else {
-      player.play();
+      await addSongToPlaylist('favorites', songId);
     }
   };
 
-  const playNext = async () => {
-    if (!currentSong || songs.length === 0) return;
-    const currentIndex = songs.findIndex((s) => s.id === currentSong.id);
-    const nextIndex = (currentIndex + 1) % songs.length;
-    await playSound(songs[nextIndex]);
+  const isFavorite = (songId: string) => {
+    const fav = playlists.find(p => p.id === 'favorites');
+    return fav ? fav.songIds.includes(songId) : false;
   };
 
-  const playPrevious = async () => {
-    if (!currentSong || songs.length === 0) return;
-    const currentIndex = songs.findIndex((s) => s.id === currentSong.id);
-    const prevIndex = (currentIndex - 1 + songs.length) % songs.length;
-    await playSound(songs[prevIndex]);
+  const toggleRepeatMode = async () => {
+    import('react-native-track-player').then(async ({ RepeatMode: RM }) => {
+      if (repeatMode === 'off') {
+        await TrackPlayer.setRepeatMode(RM.Queue);
+        setRepeatMode('queue');
+      } else if (repeatMode === 'queue') {
+        await TrackPlayer.setRepeatMode(RM.Track);
+        setRepeatMode('track');
+      } else {
+        await TrackPlayer.setRepeatMode(RM.Off);
+        setRepeatMode('off');
+      }
+    });
   };
 
-  const seekTo = async (millis: number) => {
-    // expo-audio takes seconds as argument
-    player.seekTo(millis);
-  }
+  const toggleShuffle = async () => {
+    const newShuffle = !isShuffle;
+    setIsShuffle(newShuffle);
+
+    if (currentSong) {
+      let targetList = songs;
+      if (currentContextId !== 'all') {
+        if (playlists.find(p => p.id === currentContextId)) {
+          const p = playlists.find(p => p.id === currentContextId);
+          targetList = songs.filter(s => p?.songIds.includes(s.id));
+        } else if (albums[currentContextId]) {
+          targetList = albums[currentContextId].songs;
+        } else if (folders[currentContextId]) {
+          targetList = folders[currentContextId].songs;
+        } else if (artists[currentContextId]) {
+          targetList = artists[currentContextId].songs;
+        }
+      }
+
+      const q = await TrackPlayer.getQueue();
+      const currentIndex = await TrackPlayer.getActiveTrackIndex();
+      if (currentIndex !== undefined && currentIndex !== null) {
+        // Remove all tracks except the current one to prevent playback interruption
+        const indicesToRemove = [];
+        for (let i = 0; i < q.length; i++) {
+          if (i !== currentIndex) indicesToRemove.push(i);
+        }
+        if (indicesToRemove.length > 0) {
+          await TrackPlayer.remove(indicesToRemove);
+        }
+
+        const originalIndex = currentSong ? targetList.findIndex(s => s.id === currentSong.id) : -1;
+        const mapTrack = (s: Song) => ({ id: s.id, url: s.uri, title: s.title, artist: s.artist, album: s.album, artwork: s.cover, duration: s.duration });
+
+        if (newShuffle) {
+          let tracksToShuffle = [...targetList];
+          if (originalIndex !== -1) tracksToShuffle.splice(originalIndex, 1);
+
+          for (let i = tracksToShuffle.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [tracksToShuffle[i], tracksToShuffle[j]] = [tracksToShuffle[j], tracksToShuffle[i]];
+          }
+          if (tracksToShuffle.length > 0) {
+            const mappedTracks = tracksToShuffle.map(mapTrack);
+            await TrackPlayer.add(mappedTracks);
+          }
+        } else {
+          // Restore original order
+          const beforeTracks = targetList.slice(0, originalIndex).map(mapTrack);
+          const afterTracks = targetList.slice(originalIndex + 1).map(mapTrack);
+
+          if (afterTracks.length > 0) {
+            await TrackPlayer.add(afterTracks);
+          }
+          if (beforeTracks.length > 0) {
+            await TrackPlayer.add(beforeTracks, 0);
+          }
+        }
+      }
+    }
+  };
 
   return (
-    <AudioContext.Provider
-      value={{
-        songs,
-        setSongs: handleSetSongs,
-        albums,
-        folders,
-        playlists,
-        createPlaylist,
-        deletePlaylist,
-        addSongToPlaylist,
-        removeSongFromPlaylist,
-        currentSong,
-        isPlaying,
-        metadata,
-        position,
-        duration,
-        playSound,
-        pauseOrResumeSound,
-        playNext,
-        playPrevious,
-        seekTo,
-        metadataCache,
-        extractMetadataOnDemand,
-        loadSongsFromUri
-      }}
-    >
+    <AudioContext.Provider value={{
+      songs, setSongs: () => { }, albums, folders, artists, playlists,
+      createPlaylist, deletePlaylist, addSongToPlaylist, removeSongFromPlaylist, updatePlaylistCover,
+      currentSong, isPlaying, metadata: { cover: currentSong?.cover || null, lyrics: lyrics, audioDetails },
+      playSound, playWithShuffle, pauseOrResumeSound, playNext, playPrevious, seekTo,
+      metadataCache: {}, extractMetadataOnDemand, currentContextId,
+      loadSongsFromUri: loadSongsFromMediaLibrary,
+      queuePosition, queueLength,
+      toggleFavorite, isFavorite, repeatMode, toggleRepeatMode, isShuffle,
+      toggleShuffle,
+      changeMusicFolder
+    }}>
       {children}
     </AudioContext.Provider>
   );

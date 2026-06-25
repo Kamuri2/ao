@@ -1,162 +1,187 @@
-import React from 'react';
-import { View, StyleSheet, StatusBar } from 'react-native';
-import { BlurView } from 'expo-blur';
-import { NavigationContainer, Theme } from '@react-navigation/native';
+import React, { useEffect, useState } from 'react';
+import { View, StyleSheet, StatusBar, LogBox } from 'react-native';
+import { NavigationContainer, Theme, useNavigationContainerRef } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { createMaterialTopTabNavigator } from '@react-navigation/material-top-tabs';
+import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { AudioProvider, useAudio } from './src/context/AudioContext';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { AudioProvider } from './src/context/AudioContext';
 import { ThemeProvider, useTheme } from './src/context/ThemeContext';
+
+LogBox.ignoreLogs([
+  'VirtualizedList: You have a large list that is slow to update',
+  'InteractionManager has been deprecated',
+]);
+
+// ... other imports ...
 import HomeScreen from './src/screens/HomeScreen';
 import PlayerScreen from './src/screens/PlayerScreen';
 import AlbumsScreen from './src/screens/AlbumsScreen';
+import ArtistsScreen from './src/screens/ArtistsScreen';
 import FoldersScreen from './src/screens/FoldersScreen';
 import FolderDetailScreen from './src/screens/FolderDetailScreen';
 import PlaylistsScreen from './src/screens/PlaylistsScreen';
 import MiniPlayer from './src/components/MiniPlayer';
+import ParticleOverlay from './src/components/ParticleOverlay';
 import SettingsScreen from './src/screens/SettingsScreen';
+import EqualizerScreen from './src/screens/EqualizerScreen';
 
-const Stack = createNativeStackNavigator();
-const Tab = createBottomTabNavigator();
+const RootStack = createNativeStackNavigator();
+const Tab = createMaterialTopTabNavigator();
+
+const HomeStack = createNativeStackNavigator();
+const FoldersStack = createNativeStackNavigator();
+const AlbumsStack = createNativeStackNavigator();
+const ArtistsStack = createNativeStackNavigator();
+const PlaylistsStack = createNativeStackNavigator();
+
+function HomeStackScreen() {
+  const { colors, backgroundImage } = useTheme();
+  return (
+    <HomeStack.Navigator id="HomeStack" screenOptions={{ headerShown: false, contentStyle: { backgroundColor: backgroundImage ? 'transparent' : colors.background } }}>
+      <HomeStack.Screen name="CancionesMain" component={HomeScreen} />
+      <HomeStack.Screen name="FolderDetail" component={FolderDetailScreen} options={{ animation: 'fade' }} />
+    </HomeStack.Navigator>
+  );
+}
+
+function FoldersStackScreen() {
+  const { colors, backgroundImage } = useTheme();
+  return (
+    <FoldersStack.Navigator id="FoldersStack" screenOptions={{ headerShown: false, contentStyle: { backgroundColor: backgroundImage ? 'transparent' : colors.background } }}>
+      <FoldersStack.Screen name="CarpetasMain" component={FoldersScreen} />
+      <FoldersStack.Screen name="FolderDetail" component={FolderDetailScreen} options={{ animation: 'fade' }} />
+    </FoldersStack.Navigator>
+  );
+}
+
+function AlbumsStackScreen() {
+  const { colors, backgroundImage } = useTheme();
+  return (
+    <AlbumsStack.Navigator id="AlbumsStack" screenOptions={{ headerShown: false, contentStyle: { backgroundColor: backgroundImage ? 'transparent' : colors.background } }}>
+      <AlbumsStack.Screen name="ÁlbumesMain" component={AlbumsScreen} />
+      <AlbumsStack.Screen name="FolderDetail" component={FolderDetailScreen} options={{ animation: 'fade' }} />
+    </AlbumsStack.Navigator>
+  );
+}
+
+function ArtistsStackScreen() {
+  const { colors, backgroundImage } = useTheme();
+  return (
+    <ArtistsStack.Navigator id="ArtistsStack" screenOptions={{ headerShown: false, contentStyle: { backgroundColor: backgroundImage ? 'transparent' : colors.background } }}>
+      <ArtistsStack.Screen name="ArtistasMain" component={ArtistsScreen} />
+      <ArtistsStack.Screen name="FolderDetail" component={FolderDetailScreen} options={{ animation: 'fade' }} />
+    </ArtistsStack.Navigator>
+  );
+}
+
+function PlaylistsStackScreen() {
+  const { colors, backgroundImage } = useTheme();
+  return (
+    <PlaylistsStack.Navigator id="PlaylistsStack" screenOptions={{ headerShown: false, contentStyle: { backgroundColor: backgroundImage ? 'transparent' : colors.background } }}>
+      <PlaylistsStack.Screen name="PlaylistsMain" component={PlaylistsScreen} />
+      <PlaylistsStack.Screen name="FolderDetail" component={FolderDetailScreen} options={{ animation: 'fade' }} />
+    </PlaylistsStack.Navigator>
+  );
+}
 
 function TabNavigator() {
-  const { colors } = useTheme();
+  const { colors, backgroundImage, isDarkMode } = useTheme();
+  const insets = useSafeAreaInsets();
 
   return (
     <Tab.Navigator
       id="RootTabNavigator"
+      tabBarPosition="bottom"
       screenOptions={{
-        headerShown: false,
+        sceneStyle: { backgroundColor: backgroundImage ? 'transparent' : colors.background },
         tabBarStyle: {
-          position: 'absolute',
-          borderTopWidth: 3,
-          borderTopColor: colors.border,
+          backgroundColor: isDarkMode ? '#0A0A0A' : '#FFFFFF',
+          borderTopWidth: 1,
+          borderTopColor: isDarkMode ? '#1A1A1A' : '#F0F0F0',
           elevation: 0,
-          height: 65,
-          backgroundColor: colors.card,
+          shadowOpacity: 0,
+          paddingBottom: insets.bottom,
+          height: 60 + insets.bottom,
         },
-        tabBarBackground: () => (
-          <View style={[StyleSheet.absoluteFill, { backgroundColor: colors.card }]} />
-        ),
+        tabBarIndicatorStyle: {
+          backgroundColor: colors.primary,
+          height: 3,
+          borderTopLeftRadius: 3,
+          borderTopRightRadius: 3,
+        },
         tabBarActiveTintColor: colors.primary,
-        tabBarInactiveTintColor: colors.text,
+        tabBarInactiveTintColor: colors.subText,
         tabBarLabelStyle: {
           fontFamily: 'sans-serif-medium',
-          fontSize: 11,
-          paddingBottom: 5,
-          fontWeight: '900',
-        }
+          fontSize: 10,
+          fontWeight: 'bold',
+          textTransform: 'none',
+        },
+        swipeEnabled: true,
+        animationEnabled: true,
       }}
     >
-      <Tab.Screen
-        name="Canciones"
-        component={HomeScreen}
-        options={{
-          tabBarIcon: ({ color, size }) => <Ionicons name="musical-notes" size={size} color={color} />
-        }}
-      />
-      <Tab.Screen
-        name="Carpetas"
-        component={FoldersScreen}
-        options={{
-          tabBarIcon: ({ color, size }) => <Ionicons name="folder" size={size} color={color} />
-        }}
-      />
-      <Tab.Screen
-        name="Álbumes"
-        component={AlbumsScreen}
-        options={{
-          tabBarIcon: ({ color, size }) => <Ionicons name="albums" size={size} color={color} />
-        }}
-      />
-      <Tab.Screen
-        name="Listas"
-        component={PlaylistsScreen}
-        options={{
-          tabBarIcon: ({ color, size }) => <Ionicons name="list" size={size} color={color} />
-        }}
-      />
+      <Tab.Screen name="Canciones" component={HomeStackScreen} options={{ tabBarLabel: 'Canciones', tabBarIcon: ({ color }) => <Ionicons name="musical-notes" size={20} color={color} /> }} />
+      <Tab.Screen name="Carpetas" component={FoldersStackScreen} options={{ tabBarLabel: 'Carpetas', tabBarIcon: ({ color }) => <Ionicons name="folder" size={20} color={color} /> }} />
+      <Tab.Screen name="Artistas" component={ArtistsStackScreen} options={{ tabBarLabel: 'Artistas', tabBarIcon: ({ color }) => <Ionicons name="people" size={20} color={color} /> }} />
+      <Tab.Screen name="Álbumes" component={AlbumsStackScreen} options={{ tabBarLabel: 'Álbumes', tabBarIcon: ({ color }) => <Ionicons name="albums" size={20} color={color} /> }} />
+      <Tab.Screen name="Playlists" component={PlaylistsStackScreen} options={{ tabBarLabel: 'Playlists', tabBarIcon: ({ color }) => <Ionicons name="list" size={20} color={color} /> }} />
     </Tab.Navigator>
   );
 }
 
-function MainTabsWithMiniPlayer() {
-  const { currentSong } = useAudio();
-  const { colors } = useTheme();
+function AppContent() {
+  const { colors, isDarkMode, backgroundImage } = useTheme();
+  const navigationRef = useNavigationContainerRef<any>();
+  const [currentRoute, setCurrentRoute] = useState<string | undefined>(undefined);
 
-  return (
-    <View style={{ flex: 1, backgroundColor: colors.background }}>
-      <TabNavigator />
-      {currentSong && <MiniPlayer />}
-    </View>
-  );
-}
-
-function MainNavigator() {
-  const { colors, isDarkMode } = useTheme();
-
-  const reactNavigationTheme: Theme = {
+  const navigationTheme: Theme = {
     dark: isDarkMode,
     colors: {
       primary: colors.primary,
-      background: colors.background,
+      background: backgroundImage ? 'transparent' : colors.background,
       card: colors.card,
       text: colors.text,
       border: colors.border,
-      notification: '#ff4757',
+      notification: colors.accent,
     },
     fonts: {
-      regular: { fontFamily: 'System', fontWeight: '400' },
-      medium: { fontFamily: 'System', fontWeight: '700' },
-      bold: { fontFamily: 'System', fontWeight: '900' },
-      heavy: { fontFamily: 'System', fontWeight: '900' },
-    },
+      regular: { fontFamily: 'sans-serif', fontWeight: 'normal' },
+      medium: { fontFamily: 'sans-serif-medium', fontWeight: '500' },
+      bold: { fontFamily: 'sans-serif-medium', fontWeight: 'bold' },
+      heavy: { fontFamily: 'sans-serif-medium', fontWeight: '900' },
+    }
   };
-
-  return (
-    <NavigationContainer theme={reactNavigationTheme}>
-      <Stack.Navigator
-        id="RootStackNavigator"
-        screenOptions={{
-          headerShown: false,
-          contentStyle: { backgroundColor: colors.background },
-          animation: 'fade',
-        }}
-      >
-        <Stack.Screen name="MainTabs" component={MainTabsWithMiniPlayer} />
-        <Stack.Screen
-          name="FolderDetail"
-          component={FolderDetailScreen}
-          options={{ animation: 'slide_from_right' }}
-        />
-        <Stack.Screen
-          name="Settings"
-          component={SettingsScreen}
-          options={{ animation: 'slide_from_bottom' }}
-        />
-        <Stack.Screen
-          name="Player"
-          component={PlayerScreen}
-          options={{
-            presentation: 'modal',
-            animation: 'slide_from_bottom',
-            gestureEnabled: true,
-            gestureDirection: 'vertical',
-          }}
-        />
-      </Stack.Navigator>
-    </NavigationContainer>
-  );
-}
-
-function AppContent() {
-  const { colors, isDarkMode } = useTheme();
 
   return (
     <>
       <StatusBar barStyle={isDarkMode ? "light-content" : "dark-content"} backgroundColor={colors.background} />
-      <MainNavigator />
+      <GestureHandlerRootView style={{ flex: 1 }}>
+        <NavigationContainer 
+          theme={navigationTheme}
+          ref={navigationRef}
+          onReady={() => {
+            const route = navigationRef.getCurrentRoute();
+            if (route) setCurrentRoute(route.name);
+          }}
+          onStateChange={() => {
+            const route = navigationRef.getCurrentRoute();
+            if (route) setCurrentRoute(route.name);
+          }}
+        >
+          <RootStack.Navigator id="RootStack" screenOptions={{ headerShown: false, contentStyle: { backgroundColor: backgroundImage ? 'transparent' : colors.background } }}>
+            <RootStack.Screen name="Tabs" component={TabNavigator} />
+            <RootStack.Screen name="Settings" component={SettingsScreen} options={{ animation: 'slide_from_bottom' }} />
+            <RootStack.Screen name="Equalizer" component={EqualizerScreen} options={{ animation: 'slide_from_bottom' }} />
+            <RootStack.Screen name="Player" component={PlayerScreen} options={{ animation: 'slide_from_bottom', presentation: 'transparentModal' }} />
+          </RootStack.Navigator>
+          
+          <ParticleOverlay />
+          <MiniPlayer currentRoute={currentRoute} />
+        </NavigationContainer>
+      </GestureHandlerRootView>
     </>
   );
 }
@@ -164,25 +189,11 @@ function AppContent() {
 export default function App() {
   return (
     <SafeAreaProvider>
-      <AudioProvider>
-        <ThemeProvider>
+      <ThemeProvider>
+        <AudioProvider>
           <AppContent />
-        </ThemeProvider>
-      </AudioProvider>
+        </AudioProvider>
+      </ThemeProvider>
     </SafeAreaProvider>
   );
 }
-
-const styles = StyleSheet.create({
-  dot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    marginTop: 5,
-    shadowColor: '#a540beff',
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.8,
-    shadowRadius: 5,
-    elevation: 3,
-  }
-});

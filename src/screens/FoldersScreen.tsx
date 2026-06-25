@@ -14,12 +14,32 @@ export default function FoldersScreen({ navigation }: any) {
   const insets = useSafeAreaInsets();
   const foldersArray = Object.values(folders || {});
 
+  const renderFolder = React.useCallback(({ item }: ListRenderItemInfo<Folder>) => {
+    return (
+      <TouchableOpacity
+        style={styles.folderCard}
+        onPress={() => navigation.navigate('FolderDetail', { folderName: item.name })}
+        activeOpacity={0.7}
+      >
+        <CoverImage
+          coverUrl={item.cover}
+          style={styles.cover}
+          placeholderStyle={[styles.placeholderCover, { backgroundColor: colors.card }]}
+          hq={true}
+          audioUri={item.songs?.[0]?.uri}
+        />
+        <View style={styles.info}>
+          <Text style={[styles.folderName, { color: colors.text }]} numberOfLines={1}>{item.name}</Text>
+          <Text style={[styles.songCount, { color: colors.subText }]}>{item.songs.length} canciones</Text>
+        </View>
+      </TouchableOpacity>
+    );
+  }, [navigation, colors]);
+
   if (foldersArray.length === 0) {
     return (
       <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
-        <View style={[styles.header, { borderBottomColor: colors.border }]}>
-          <Text style={[styles.headerTitle, { color: colors.primary }]}>Carpetas</Text>
-        </View>
+        <Text style={[styles.headerTitle, { color: colors.text }]}>Carpetas</Text>
         <View style={styles.emptyContainer}>
           <Text style={[styles.emptyText, { color: colors.text }]}>No hay carpetas cargadas.</Text>
         </View>
@@ -27,33 +47,9 @@ export default function FoldersScreen({ navigation }: any) {
     );
   }
 
-  const renderFolder = ({ item }: ListRenderItemInfo<Folder>) => {
-    return (
-      <TouchableOpacity 
-        style={[styles.folderCard, { borderColor: colors.border, backgroundColor: colors.card }]}
-        onPress={() => navigation.navigate('FolderDetail', { folderName: item.name })}
-        activeOpacity={0.7}
-      >
-        <GlassContainer style={styles.glass} intensity={40}>
-          <CoverImage 
-             coverUrl={item.cover} 
-             style={styles.cover} 
-             placeholderStyle={styles.placeholderCover} 
-          />
-          <View style={styles.info}>
-            <Text style={[styles.folderName, { color: colors.text }]} numberOfLines={1}>{item.name}</Text>
-            <Text style={styles.songCount}>{item.songs.length} canciones</Text>
-          </View>
-        </GlassContainer>
-      </TouchableOpacity>
-    );
-  };
-
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
-      <View style={[styles.header, { borderBottomColor: colors.border }]}>
-        <Text style={[styles.headerTitle, { color: colors.primary }]}>Carpetas</Text>
-      </View>
+      <Text style={[styles.headerTitle, { color: colors.text }]}>Carpetas</Text>
       <FlatList
         data={foldersArray}
         keyExtractor={(item) => item.name}
@@ -73,74 +69,63 @@ export default function FoldersScreen({ navigation }: any) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F5F5F5',
-  },
-  header: {
-    padding: 20,
-    marginTop: 10,
   },
   headerTitle: {
-    color: '#30c296',
-    fontSize: 28,
+    fontSize: 40,
     fontWeight: 'bold',
-    
-    
-    
+    marginHorizontal: 20,
+    marginTop: 40,
+    marginBottom: 20,
   },
   emptyContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    padding: 20,
   },
   emptyText: {
-    color: '#000000',
-    fontSize: 16,
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginBottom: 10,
   },
   listContainer: {
-    paddingHorizontal: 15,
-    paddingBottom: 20,
+    paddingBottom: 100,
+    paddingHorizontal: 10,
+    maxWidth: 800,
+    alignSelf: 'center',
+    width: '100%',
   },
   columnWrapper: {
     justifyContent: 'space-between',
-    marginBottom: 15,
+    paddingHorizontal: 10,
   },
   folderCard: {
-    borderWidth: 2,
-    borderColor: '#000000',
-    width: '48%',
-    marginBottom: 5,
-  },
-  glass: {
-    flex: 1,
-    borderRadius: 8,
+    width: '47%',
+    marginBottom: 20,
   },
   cover: {
     width: '100%',
     aspectRatio: 1,
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
+    borderRadius: 16,
   },
   placeholderCover: {
     width: '100%',
     aspectRatio: 1,
-    backgroundColor: '#FFFFFF',
     justifyContent: 'center',
     alignItems: 'center',
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
+    borderRadius: 16,
   },
   info: {
-    padding: 12,
+    marginTop: 8,
+    paddingHorizontal: 4,
   },
   folderName: {
-    color: '#000000',
-    fontSize: 15,
+    fontSize: 25,
     fontWeight: 'bold',
   },
   songCount: {
-    color: '#30c296',
-    fontSize: 11,
-    marginTop: 4,
-    fontWeight: '600',
+    fontSize: 13,
+    marginTop: 2,
+    fontWeight: '500',
   },
 });

@@ -85,12 +85,14 @@ async function extractFfmpegMetadata(filePath: string): Promise<any> {
             const pictureData = buffer.slice(offset, offset + picLen);
             foundCover = `data:${mimeType};base64,${pictureData.toString('base64')}`;
           } catch(e) {}
-       }
+        } else if (lowerK === 'coverart') {
+          foundCover = `data:image/jpeg;base64,${tags[k]}`;
+        }
     }
 
     if (!foundCover) {
        try {
-         const { stdout } = await execFilePromise(ffmpegPath!, ['-v', 'quiet', '-i', filePath, '-map', '0:v', '-c', 'copy', '-f', 'image2pipe', '-vframes', '1', '-'], { encoding: 'buffer', maxBuffer: 10 * 1024 * 1024 });
+         const { stdout } = await execFilePromise(ffmpegPath!, ['-v', 'quiet', '-i', filePath, '-an', '-vcodec', 'mjpeg', '-f', 'image2pipe', '-vframes', '1', '-'], { encoding: 'buffer', maxBuffer: 10 * 1024 * 1024 });
          if (stdout && stdout.length > 0) {
             foundCover = `data:image/jpeg;base64,${stdout.toString('base64')}`;
          }
@@ -102,6 +104,7 @@ async function extractFfmpegMetadata(filePath: string): Promise<any> {
       artist: finalArtist,
       album: getTag('album'),
       track: getTag('track'),
+      year: getTag('date') || getTag('year') || getTag('tyer') || getTag('tdat') || getTag('tdrc'),
       lyrics: foundLyrics || getTag('text'),
       cover_base64: foundCover
     };
@@ -178,12 +181,14 @@ export function setupIpc() {
     
     const promise = (async () => {
       try {
-        const metadata = await mm.parseFile(filePath, { duration: false });
         let coverBase64: string | null = null;
-        if (metadata.common.picture && metadata.common.picture.length > 0) {
-          const picture = metadata.common.picture[0];
-          coverBase64 = `data:${picture.format};base64,${Buffer.from(picture.data).toString('base64')}`;
-        }
+        try {
+          const metadata = await mm.parseFile(filePath, { duration: false });
+          if (metadata.common.picture && metadata.common.picture.length > 0) {
+            const picture = metadata.common.picture[0];
+            coverBase64 = `data:${picture.format};base64,${Buffer.from(picture.data).toString('base64')}`;
+          }
+        } catch(e) {}
         
         if (!coverBase64 && filePath.toLowerCase().endsWith('.opus')) {
            coverBase64 = await extractFfmpegCover(filePath);
@@ -244,6 +249,7 @@ export function setupIpc() {
       let format = 'unknown';
       let bitrate = 0;
       let sampleRate = 0;
+      let year = '';
 
       try {
         const metadata = await mm.parseFile(filePath, { duration: true });
@@ -313,6 +319,7 @@ export function setupIpc() {
         title = metadata.common.title || title;
         artist = metadata.common.albumartist || metadata.common.artist || artist;
         album = metadata.common.album || album;
+        year = metadata.common.year?.toString() || metadata.common.date || year;
       } catch(e) {}
 
       if (filePath.toLowerCase().endsWith('.opus') || filePath.toLowerCase().endsWith('.ogg')) {
@@ -321,6 +328,7 @@ export function setupIpc() {
            if (ffMeta.title) title = ffMeta.title;
            if (ffMeta.artist) artist = ffMeta.artist;
            if (ffMeta.album) album = ffMeta.album;
+           if (ffMeta.year) year = ffMeta.year;
            if (ffMeta.lyrics) lyrics = ffMeta.lyrics;
          }
       }
@@ -372,9 +380,10 @@ export function setupIpc() {
         lyrics,
         format,
         bitrate,
-        sampleRate
+        sampleRate,
+        year
       };
-    } catch (e) {
+    } catch (err) {
       let ffMeta: any = null;
       if (filePath.toLowerCase().endsWith('.opus') || filePath.toLowerCase().endsWith('.ogg')) {
          ffMeta = await extractFfmpegMetadata(filePath);
@@ -491,6 +500,7 @@ async function getAudioFilesRecursive(dir: string): Promise<any[]> {
           let album = 'Desconocido';
           let trackNumber = 0;
           let hasLyrics = false;
+          let year = '';
           try {
             const meta = await mm.parseFile(fullPath, { skipCovers: true, duration: false });
             if (meta.common.title) title = meta.common.title;
@@ -498,7 +508,8 @@ async function getAudioFilesRecursive(dir: string): Promise<any[]> {
             else if (meta.common.artist) artist = meta.common.artist;
             if (meta.common.album) album = meta.common.album;
             if (meta.common.track.no) trackNumber = meta.common.track.no;
-            
+            year = meta.common.year?.toString() || meta.common.date || year;
+
             if (meta.common.lyrics && meta.common.lyrics.length > 0) {
               hasLyrics = true;
             } else if (meta.native) {
@@ -574,6 +585,7 @@ async function getAudioFilesRecursive(dir: string): Promise<any[]> {
             artist,
             album,
             trackNumber,
+            year,
             folder: folderName,
             path: fullPath,
             hasLyrics,

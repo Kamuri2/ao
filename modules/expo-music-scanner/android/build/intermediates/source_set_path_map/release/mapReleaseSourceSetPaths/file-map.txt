@@ -1,0 +1,7 @@
+expo.modules.musicscanner.expo-music-scanner-pngs-0 C:\Users\kevin\Downloads\Ao Project\CyberMusic\modules\expo-music-scanner\android\build\generated\res\pngs\release
+expo.modules.musicscanner.expo-music-scanner-resValues-1 C:\Users\kevin\Downloads\Ao Project\CyberMusic\modules\expo-music-scanner\android\build\generated\res\resValues\release
+expo.modules.musicscanner.expo-music-scanner-mergeReleaseResources-2 C:\Users\kevin\Downloads\Ao Project\CyberMusic\modules\expo-music-scanner\android\build\intermediates\incremental\release\mergeReleaseResources\merged.dir
+expo.modules.musicscanner.expo-music-scanner-mergeReleaseResources-3 C:\Users\kevin\Downloads\Ao Project\CyberMusic\modules\expo-music-scanner\android\build\intermediates\incremental\release\mergeReleaseResources\stripped.dir
+expo.modules.musicscanner.expo-music-scanner-release-4 C:\Users\kevin\Downloads\Ao Project\CyberMusic\modules\expo-music-scanner\android\build\intermediates\merged_res\release\mergeReleaseResources
+expo.modules.musicscanner.expo-music-scanner-main-5 C:\Users\kevin\Downloads\Ao Project\CyberMusic\modules\expo-music-scanner\android\src\main\res
+expo.modules.musicscanner.expo-music-scanner-release-6 C:\Users\kevin\Downloads\Ao Project\CyberMusic\modules\expo-music-scanner\android\src\release\res

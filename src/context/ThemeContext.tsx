@@ -1,69 +1,234 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Animated, StyleSheet, ImageBackground } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
+import * as ImagePicker from 'expo-image-picker';
 
-type ThemeColors = {
+export type ThemeColors = {
   background: string;
   card: string;
   text: string;
   subText: string;
   primary: string;
   border: string;
+  secondary: string;
+  accent: string;
+  shadow: string;
 };
 
-export const brutalistLight: ThemeColors = {
-  background: '#F5F5F5',
-  card: '#FFFFFF',
-  text: '#000000',
-  subText: '#333333',
-  primary: '#30c296', // Mint green
-  border: '#000000',
-};
-
-export const brutalistDark: ThemeColors = {
-  background: '#121212', // Very dark gray
-  card: '#1E1E1E',
-  text: '#FFFFFF',
-  subText: '#AAAAAA',
-  primary: '#30c296', // Mint green stands out nicely on dark
-  border: '#FFFFFF', // White borders for brutalism in dark mode
-};
-
-type ThemeContextType = {
-  isDarkMode: boolean;
-  toggleTheme: () => void;
+export type ThemeDefinition = {
+  id: string;
+  name: string;
+  isDark: boolean;
   colors: ThemeColors;
 };
 
+export const baseThemes = [
+  { id: 'mint', name: 'Mint' },
+  { id: 'cyberpunk', name: 'Cyberpunk' },
+  { id: 'ocean', name: 'Ocean' },
+  { id: 'sunset', name: 'Sunset' },
+  { id: 'lavender', name: 'Lavender' },
+  { id: 'frutigerAero', name: 'Frutiger Aero (Glass)' },
+];
+
+export const themes: Record<string, ThemeDefinition> = {
+  mintLight: {
+    id: 'mintLight', name: 'Mint Claro', isDark: false,
+    colors: { background: '#f2f7f4', card: '#ffffff', text: '#000000', subText: '#555555', border: '#e0e0e0', primary: '#2ab78e', secondary: '#9c66e4', accent: '#ff007f', shadow: '#000000' }
+  },
+  mintDark: {
+    id: 'mintDark', name: 'Mint Oscuro', isDark: true,
+    colors: { background: '#121212', card: '#1e1e1e', text: '#ffffff', subText: '#a0a0a0', border: '#2c2c2c', primary: '#30c296', secondary: '#b388eb', accent: '#ff007f', shadow: '#000000' }
+  },
+  cyberpunkLight: {
+    id: 'cyberpunkLight', name: 'Cyberpunk Claro', isDark: false,
+    colors: { background: '#f0e6f5', card: '#ffffff', text: '#d80073', subText: '#00a8cc', border: '#e6e6e6', primary: '#ff007f', secondary: '#00e5ff', accent: '#ffe600', shadow: '#ff007f' }
+  },
+  cyberpunkDark: {
+    id: 'cyberpunkDark', name: 'Cyberpunk Oscuro', isDark: true,
+    colors: { background: '#090117', card: '#150926', text: '#00ffcc', subText: '#ff007f', border: '#2b0052', primary: '#ff007f', secondary: '#00e5ff', accent: '#ffe600', shadow: '#ff007f' }
+  },
+  oceanLight: {
+    id: 'oceanLight', name: 'Ocean Claro', isDark: false,
+    colors: { background: '#e0f7fa', card: '#ffffff', text: '#004d40', subText: '#00796b', border: '#b2dfdb', primary: '#00acc1', secondary: '#4dd0e1', accent: '#00838f', shadow: '#000000' }
+  },
+  oceanDark: {
+    id: 'oceanDark', name: 'Ocean Oscuro', isDark: true,
+    colors: { background: '#05101f', card: '#0d1e36', text: '#e0f2fe', subText: '#7dd3fc', border: '#1e3a8a', primary: '#0ea5e9', secondary: '#38bdf8', accent: '#0284c7', shadow: '#000000' }
+  },
+  sunsetLight: {
+    id: 'sunsetLight', name: 'Sunset Claro', isDark: false,
+    colors: { background: '#fff3e0', card: '#ffffff', text: '#3e2723', subText: '#6d4c41', border: '#ffe0b2', primary: '#f57c00', secondary: '#ff7043', accent: '#e64a19', shadow: '#000000' }
+  },
+  sunsetDark: {
+    id: 'sunsetDark', name: 'Sunset Oscuro', isDark: true,
+    colors: { background: '#1c0c09', card: '#311611', text: '#ffedd5', subText: '#fdba74', border: '#5b2116', primary: '#ea580c', secondary: '#f97316', accent: '#c2410c', shadow: '#000000' }
+  },
+  lavenderLight: {
+    id: 'lavenderLight', name: 'Lavanda Claro', isDark: false,
+    colors: { background: '#f5f0fa', card: '#ffffff', text: '#3b2a4f', subText: '#6b5884', border: '#e6d9f2', primary: '#8b5fd6', secondary: '#b890eb', accent: '#ff7597', shadow: '#000000' }
+  },
+  lavenderDark: {
+    id: 'lavenderDark', name: 'Lavanda Oscuro', isDark: true,
+    colors: { background: '#130e1a', card: '#1f1629', text: '#f3e8ff', subText: '#c4b5fd', border: '#3b2f4f', primary: '#a855f7', secondary: '#c084fc', accent: '#f472b6', shadow: '#000000' }
+  },
+  frutigerAeroLight: {
+    id: 'frutigerAeroLight', name: 'Frutiger Aero Claro', isDark: false,
+    colors: { background: '#e0f7fa', card: 'rgba(255, 255, 255, 0.7)', text: '#004d40', subText: '#00796b', border: 'rgba(255, 255, 255, 0.8)', primary: '#00e5ff', secondary: '#69f0ae', accent: '#b2ebf2', shadow: '#000000' }
+  },
+  frutigerAeroDark: {
+    id: 'frutigerAeroDark', name: 'Frutiger Aero Oscuro', isDark: true,
+    colors: { background: '#001a1c', card: 'rgba(0, 30, 40, 0.6)', text: '#e0f7fa', subText: '#80cbc4', border: 'rgba(0, 229, 255, 0.3)', primary: '#00e5ff', secondary: '#00bfa5', accent: '#18ffff', shadow: '#000000' }
+  }
+};
+
+export type ParticleType = 'none' | 'snow' | 'bubbles' | 'stars';
+
+type ThemeContextType = {
+  themeFamily: string;
+  setThemeFamily: (family: string) => void;
+  isDarkMode: boolean;
+  setIsDarkMode: (dark: boolean) => void;
+  toggleTheme: (x: number, y: number) => void; // Legacy
+  colors: ThemeColors;
+  particles: ParticleType;
+  setParticles: (type: ParticleType) => void;
+  themeId: string;
+  backgroundImage: string | null;
+  setBackgroundImage: (uri: string | null) => void;
+  pickBackgroundImage: () => Promise<void>;
+};
+
 const ThemeContext = createContext<ThemeContextType>({
-  isDarkMode: false,
+  themeFamily: 'mint',
+  setThemeFamily: () => {},
+  isDarkMode: true,
+  setIsDarkMode: () => {},
   toggleTheme: () => {},
-  colors: brutalistLight,
+  colors: themes.mintDark.colors,
+  particles: 'none',
+  setParticles: () => {},
+  themeId: 'mintDark',
+  backgroundImage: null,
+  setBackgroundImage: () => {},
+  pickBackgroundImage: async () => {},
 });
 
 export const useTheme = () => useContext(ThemeContext);
 
 export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [isDarkMode, setIsDarkMode] = useState(false);
+  const [themeFamily, setThemeFamilyState] = useState<string>('mint');
+  const [isDarkMode, setIsDarkModeState] = useState<boolean>(true);
+  const [particles, setParticlesState] = useState<ParticleType>('none');
+  const [animating, setAnimating] = useState(false);
+  const [opacity] = useState(new Animated.Value(1));
 
   useEffect(() => {
-    AsyncStorage.getItem('@dark_mode').then((val) => {
-      if (val === 'true') {
-        setIsDarkMode(true);
+    AsyncStorage.getItem('@theme_family').then((val) => {
+      if (val && baseThemes.find(t => t.id === val)) {
+        setThemeFamilyState(val);
       }
+    });
+    AsyncStorage.getItem('@is_dark_mode').then((val) => {
+      if (val !== null) setIsDarkModeState(val === 'true');
+    });
+    
+    AsyncStorage.getItem('@particles').then((val) => {
+      if (val === 'snow' || val === 'bubbles' || val === 'stars' || val === 'none') {
+        setParticlesState(val);
+      }
+    });
+    
+    AsyncStorage.getItem('@background_image').then((val) => {
+      if (val) setBackgroundImageState(val);
     });
   }, []);
 
-  const toggleTheme = async () => {
-    const newMode = !isDarkMode;
-    setIsDarkMode(newMode);
-    await AsyncStorage.setItem('@dark_mode', newMode ? 'true' : 'false');
+  const [backgroundImage, setBackgroundImageState] = useState<string | null>(null);
+
+  const setBackgroundImage = (uri: string | null) => {
+    setBackgroundImageState(uri);
+    if (uri) {
+      AsyncStorage.setItem('@background_image', uri);
+    } else {
+      AsyncStorage.removeItem('@background_image');
+    }
   };
 
-  const colors = isDarkMode ? brutalistDark : brutalistLight;
+  const pickBackgroundImage = async () => {
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images'],
+      allowsEditing: true,
+      quality: 1,
+    });
+
+    if (!result.canceled && result.assets[0]) {
+      setBackgroundImage(result.assets[0].uri);
+    }
+  };
+
+  const setThemeFamily = (family: string) => {
+    setThemeFamilyState(family);
+    AsyncStorage.setItem('@theme_family', family);
+  };
+
+  const setIsDarkMode = (dark: boolean) => {
+    setIsDarkModeState(dark);
+    AsyncStorage.setItem('@is_dark_mode', dark ? 'true' : 'false');
+  };
+
+  const setParticles = (type: ParticleType) => {
+    setParticlesState(type);
+    AsyncStorage.setItem('@particles', type);
+  };
+
+  const toggleTheme = () => {
+    if (animating) return;
+    setAnimating(true);
+    const newDark = !isDarkMode;
+    
+    Animated.sequence([
+      Animated.timing(opacity, { toValue: 0.8, duration: 150, useNativeDriver: true }),
+    ]).start(async () => {
+      setIsDarkMode(newDark);
+      Animated.timing(opacity, { toValue: 1, duration: 150, useNativeDriver: true }).start(() => setAnimating(false));
+    });
+  };
+
+  const themeId = `${themeFamily}${isDarkMode ? 'Dark' : 'Light'}`;
+  const currentTheme = themes[themeId] || themes.mintDark;
+
+  const isFrutiger = themeFamily === 'frutigerAero';
 
   return (
-    <ThemeContext.Provider value={{ isDarkMode, toggleTheme, colors }}>
-      {children}
+    <ThemeContext.Provider value={{ 
+      themeFamily, 
+      setThemeFamily, 
+      isDarkMode, 
+      setIsDarkMode,
+      toggleTheme, 
+      colors: currentTheme.colors,
+      particles,
+      setParticles,
+      themeId,
+      backgroundImage,
+      setBackgroundImage,
+      pickBackgroundImage
+    }}>
+      <Animated.View style={{ flex: 1, backgroundColor: currentTheme.colors.background, opacity }}>
+        {backgroundImage ? (
+           <ImageBackground source={{ uri: backgroundImage }} style={StyleSheet.absoluteFill} blurRadius={isFrutiger ? 20 : 0} />
+        ) : isFrutiger && (
+          <LinearGradient
+            colors={isDarkMode ? ['#001a1c', '#004d40', '#001a1c'] : ['#e0f7fa', '#b2ebf2', '#80cbc4', '#e0f7fa']}
+            style={StyleSheet.absoluteFill}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+          />
+        )}
+        {children}
+      </Animated.View>
     </ThemeContext.Provider>
   );
 };

@@ -13,6 +13,7 @@ export interface Song {
   lyrics?: string;
   hasLyrics?: boolean;
   trackNumber?: number;
+  year?: string;
 }
 
 export interface Metadata {
@@ -35,6 +36,7 @@ export interface Album {
   artist: string;
   cover: string | null;
   songs: Song[];
+  year?: string;
 }
 
 export interface Folder {
@@ -93,4 +95,6 @@ export interface AudioContextType {
   changeMusicFolder: () => Promise<void>;
   isPlayerOpen: boolean;
   setIsPlayerOpen: (open: boolean) => void;
+  showLyrics: boolean;
+  setShowLyrics: (show: boolean) => void;
 }

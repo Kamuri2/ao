@@ -4,11 +4,13 @@ export interface Song {
   filename: string;
   folder: string;
   duration: number;
+  title?: string;
   // Extra metadata populated later
   album?: string;
   artist?: string;
   cover?: string | null;
   lyrics?: string;
+  trackNumber?: number;
 }
 
 export interface Metadata {
@@ -22,6 +24,7 @@ export interface Metadata {
 export interface Playlist {
   id: string;
   name: string;
+  cover?: string | null;
   songIds: string[];
 }
 
@@ -38,27 +41,47 @@ export interface Folder {
   songs: Song[];
 }
 
+export interface Artist {
+  name: string;
+  cover: string | null;
+  songs: Song[];
+}
+
 export interface AudioContextType {
   songs: Song[];
   setSongs: (songs: Song[]) => void;
   albums: Record<string, Album>;
   folders: Record<string, Folder>;
+  artists: Record<string, Artist>;
   playlists: Playlist[];
   createPlaylist: (name: string) => Promise<void>;
   deletePlaylist: (id: string) => Promise<void>;
   addSongToPlaylist: (playlistId: string, songId: string) => Promise<void>;
   removeSongFromPlaylist: (playlistId: string, songId: string) => Promise<void>;
+  updatePlaylistCover: (playlistId: string, coverUri: string) => Promise<void>;
   currentSong: Song | null;
   isPlaying: boolean;
-  metadata: { cover: string | null; lyrics: string | null };
-  position: number;
-  duration: number;
-  playSound: (song: Song) => Promise<void>;
+  metadata: { cover: string | null; lyrics: string | null; audioDetails: { bitrate?: number; sampleRate?: number; format?: string } | null };
+  playSound: (song: Song, contextId?: string, contextList?: Song[], forceShuffle?: boolean) => Promise<void>;
+  playWithShuffle: (contextId?: string, contextList?: Song[]) => Promise<void>;
   pauseOrResumeSound: () => Promise<void>;
   playNext: () => Promise<void>;
   playPrevious: () => Promise<void>;
   seekTo: (millis: number) => Promise<void>;
-  metadataCache: Record<string, { coverUri: string | null; lyrics: string | null }>;
-  extractMetadataOnDemand: (uri: string) => Promise<{ cover: string | null; lyrics: string | null }>;
-  loadSongsFromUri: (uri: string) => Promise<void>;
+  metadataCache: Record<string, { title: string | null; artist: string | null; album: string | null; coverUri: string | null; lyrics: string | null }>;
+  extractMetadataOnDemand: (uri: string) => Promise<{ title: string | null; artist: string | null; album: string | null; cover: string | null; lyrics: string | null }>;
+  loadSongsFromUri: (uri?: string) => Promise<void>;
+  currentContextId: string;
+  queuePosition: number;
+  queueLength: number;
+  
+  toggleFavorite: (songId: string) => Promise<void>;
+  isFavorite: (songId: string) => boolean;
+  
+  repeatMode: 'off' | 'track' | 'queue';
+  toggleRepeatMode: () => Promise<void>;
+  
+  isShuffle: boolean;
+  toggleShuffle: () => Promise<void>;
+  changeMusicFolder: () => Promise<void>;
 }
