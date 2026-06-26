@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-// import removed
+import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowLeft, Play, Pause, SkipBack, SkipForward, Repeat, Shuffle, ListMusic, Mic2 } from 'lucide-react';
 import { useAudio } from '../context/AudioContext';
@@ -10,6 +10,7 @@ import LyricsView from '../components/LyricsView';
 
 export default function PlayerScreen() {
   const { colors } = useTheme();
+  const navigate = useNavigate();
   const [isQueueOpen, setIsQueueOpen] = useState(false);
   const [isIdle, setIsIdle] = useState(false);
   const {
@@ -128,7 +129,11 @@ export default function PlayerScreen() {
               {(() => {
                 const currentIndex = queuePosition - 1;
                 const items: { song: any; offset: number }[] = [];
-                for (let offset = -2; offset <= 2; offset++) {
+                const showOnlyCenter = showLyrics || isQueueOpen;
+                const minOffset = showOnlyCenter ? 0 : -2;
+                const maxOffset = showOnlyCenter ? 0 : 2;
+
+                for (let offset = minOffset; offset <= maxOffset; offset++) {
                   let index = currentIndex + offset;
                   if (repeatMode === 'queue' && queue.length > 0) {
                     index = (index % queue.length + queue.length) % queue.length;
@@ -229,7 +234,13 @@ export default function PlayerScreen() {
                 <h2 className="text-3xl font-black text-white truncate mb-1">
                   {currentSong.title || currentSong.filename.replace(/\.[^/.]+$/, "")}
                 </h2>
-                <p className="text-lg font-medium text-white/70 truncate">
+                <p 
+                  className="text-lg font-medium text-white/70 truncate cursor-pointer hover:underline hover:text-white transition-colors w-fit"
+                  onClick={() => {
+                    setIsPlayerOpen(false);
+                    navigate(`/detail/artist/${encodeURIComponent(currentSong.artist || 'Desconocido')}`);
+                  }}
+                >
                   {currentSong.artist || 'Desconocido'}
                 </p>
               </motion.div>

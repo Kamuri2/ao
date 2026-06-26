@@ -1,35 +1,105 @@
 import { useAudio } from '../context/AudioContext';
 import { useTheme } from '../context/ThemeContext';
 import CoverImage from '../components/CoverImage';
-import { useNavigate, useLocation } from 'react-router-dom';
-import { motion } from 'framer-motion';
-import React from 'react';
+// @ts-ignore
+import React, { useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 
 export default function ArtistsScreen() {
   const { artists } = useAudio();
   const { colors } = useTheme();
   const navigate = useNavigate();
 
+  const sortedArtists = useMemo(() => {
+    return Object.values(artists).sort((a: any, b: any) => a.name.localeCompare(b.name));
+  }, [artists]);
+
+  const existingLetters = useMemo(() => {
+    const letters = new Set<string>();
+    sortedArtists.forEach((a: any) => {
+      const firstChar = a.name.charAt(0).toUpperCase();
+      if (/[A-Z]/.test(firstChar)) {
+        letters.add(firstChar);
+      } else {
+        letters.add("#");
+      }
+    });
+    return letters;
+  }, [sortedArtists]);
+
+  const firstOfLetter = useMemo(() => {
+    const map = new Map<string, string>();
+    sortedArtists.forEach((a: any) => {
+      const firstChar = a.name.charAt(0).toUpperCase();
+      const letter = /[A-Z]/.test(firstChar) ? firstChar : "#";
+      if (!map.has(letter)) {
+        map.set(letter, a.name);
+      }
+    });
+    return map;
+  }, [sortedArtists]);
+
+  const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ#".split("");
+
+  const scrollToLetter = (letter: string) => {
+    const element = document.getElementById(`letter-${letter}`);
+    if (element) {
+      element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  };
+
   return (
-    <div className="flex-1 px-8 py-8 max-w-full w-full animate-fade-in">
+    <div className="flex-1 px-8 py-8 max-w-full w-full animate-fade-in relative">
       <h1 className="text-4xl font-black uppercase tracking-widest mb-8" style={{ color: colors.text }}>Artistas</h1>
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-6 w-full pb-32">
-        {Object.values(artists).map((artist: any) => (
-          <div key={artist.name} className="flex flex-col items-center group cursor-pointer h-full"
-               onClick={() => navigate(`/detail/artist/${encodeURIComponent(artist.name)}`)}>
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-6 w-full pb-32 pr-12">
+        {sortedArtists.map((artist: any) => {
+          const firstChar = artist.name.charAt(0).toUpperCase();
+          const letter = /[A-Z]/.test(firstChar) ? firstChar : "#";
+          const isFirst = firstOfLetter.get(letter) === artist.name;
+
+          return (
             <div 
-              className="w-full aspect-square rounded-full mb-4 overflow-hidden shadow-lg bg-black/5 dark:bg-white/5 transition-all duration-300 group-hover:brightness-110"
+              key={artist.name} 
+              id={isFirst ? `letter-${letter}` : undefined}
+              className="flex flex-col items-center group cursor-pointer h-full"
+              onClick={() => navigate(`/detail/artist/${encodeURIComponent(artist.name)}`)}
             >
-              <CoverImage 
-                coverUrl={artist.cover} 
-                hq={true}
-                className="w-full h-full object-cover"
-              />
+              <div 
+                className="w-full aspect-square rounded-full mb-4 overflow-hidden shadow-lg bg-black/5 dark:bg-white/5 transition-all duration-300 group-hover:brightness-110"
+              >
+                <CoverImage 
+                  coverUrl={artist.cover} 
+                  hq={true}
+                  className="w-full h-full object-cover"
+                />
+              </div>
+              <h2 className="text-center font-bold text-lg truncate w-full" style={{ color: colors.text }}>{artist.name}</h2>
+              <p className="text-center text-sm opacity-70 truncate w-full" style={{ color: colors.subText }}>{artist.songs.length} pistas</p>
             </div>
-            <h2 className="text-center font-bold text-lg truncate w-full" style={{ color: colors.text }}>{artist.name}</h2>
-            <p className="text-center text-sm opacity-70 truncate w-full" style={{ color: colors.subText }}>{artist.songs.length} pistas</p>
-          </div>
-        ))}
+          );
+        })}
+      </div>
+
+      <div className="fixed right-6 top-1/2 -translate-y-1/2 flex flex-col items-center gap-[2px] z-50 p-2 rounded-full bg-black/5 dark:bg-white/5 backdrop-blur-md shadow-lg" style={{ maxHeight: '80vh', overflowY: 'auto' }}>
+        {alphabet.map(letter => {
+          const exists = existingLetters.has(letter);
+          return (
+            <button
+              key={letter}
+              onClick={() => exists && scrollToLetter(letter)}
+              disabled={!exists}
+              className={`text-[10px] sm:text-xs font-bold w-5 h-5 sm:w-6 sm:h-6 rounded-full flex items-center justify-center transition-all ${
+                exists ? 'hover:scale-125 cursor-pointer' : 'opacity-20 cursor-default'
+              }`}
+              style={{ 
+                color: exists ? colors.text : colors.subText,
+                backgroundColor: exists ? 'transparent' : 'transparent'
+              }}
+            >
+              {letter}
+            </button>
+          )
+        })}
       </div>
     </div>
   );

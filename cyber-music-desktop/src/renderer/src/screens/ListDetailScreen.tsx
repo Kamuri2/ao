@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { useParams, useNavigate, useLocation } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { useAudio } from '../context/AudioContext';
 import { useTheme } from '../context/ThemeContext';
-import { ArrowLeft, Play, Shuffle, Activity, Clock } from 'lucide-react';
+import { ArrowLeft, Play, Shuffle, Activity, Clock, ExternalLink, Music } from 'lucide-react';
 import CoverImage from '../components/CoverImage';
 import { useDominantColor } from '../hooks/useDominantColor';
 import { Virtuoso } from 'react-virtuoso';
@@ -52,11 +52,8 @@ const SongListItem = React.memo(({ item, isPlaying, onPress, index, hideCover }:
 export default function ListDetailScreen() {
   const { type, id } = useParams();
   const navigate = useNavigate();
-  const location = useLocation();
   const { albums, folders, artists, playSound, playWithShuffle, currentSong } = useAudio();
   const { colors } = useTheme();
-
-  const state = location.state as { backgroundLocation?: any };
 
   let dataList: any = null;
   let title = '';
@@ -69,43 +66,76 @@ export default function ListDetailScreen() {
   const [artistBio, setArtistBio] = useState<string | null>(null);
 
   useEffect(() => {
-    if (type === 'artist' && id && artists[id]) {
-      const artistName = artists[id].name;
-      if (artistName && artistName !== 'Desconocido') {
+    if (type === 'artist' && id) {
+      let artistData = artists[id];
+      if (!artistData) {
+        const lowerId = id.trim().toLowerCase();
+        const realKey = Object.keys(artists).find(k => k.trim().toLowerCase() === lowerId);
+        if (realKey) artistData = artists[realKey];
+      }
+      
+      if (artistData && artistData.name !== 'Desconocido') {
+        const artistName = artistData.name;
         fetch(`https://es.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(artistName)}`)
           .then(res => res.json())
           .then(data => {
-            if (data && data.extract) {
+            if (data && data.extract && data.type !== 'https://mediawiki.org/wiki/HyperSwitch/errors/not_found') {
               setArtistBio(data.extract);
             } else {
-              setArtistBio('No se encontró información del artista en Wikipedia.');
+              setArtistBio(null); // Silently fail without warning
             }
           })
-          .catch(() => setArtistBio('Error al obtener la información del artista.'));
+          .catch(() => setArtistBio(null));
+      } else {
+        setTimeout(() => setArtistBio(null), 0);
       }
     } else {
       setTimeout(() => setArtistBio(null), 0);
     }
   }, [type, id, artists]);
 
-  if (type === 'album' && id && albums[id]) {
-    dataList = albums[id].songs;
-    title = albums[id].name;
-    subtitle = albums[id].artist;
-    cover = albums[id].cover;
-    audioPath = dataList[0]?.path;
-  } else if (type === 'folder' && id && folders[id]) {
-    dataList = folders[id].songs;
-    title = folders[id].name;
-    subtitle = 'Carpeta';
-    cover = folders[id].cover;
-    audioPath = dataList[0]?.path;
-  } else if (type === 'artist' && id && artists[id]) {
-    dataList = artists[id].songs;
-    title = artists[id].name;
-    subtitle = `${dataList.length} pistas`;
-    cover = artists[id].cover;
-    audioPath = undefined; // Don't fallback to song cover for artists
+  if (type === 'album' && id) {
+    let albumData = albums[id];
+    if (!albumData) {
+      const lowerId = id.trim().toLowerCase();
+      const realKey = Object.keys(albums).find(k => k.trim().toLowerCase() === lowerId);
+      if (realKey) albumData = albums[realKey];
+    }
+    if (albumData) {
+      dataList = albumData.songs;
+      title = albumData.name;
+      subtitle = albumData.artist;
+      cover = albumData.cover;
+      audioPath = dataList[0]?.path;
+    }
+  } else if (type === 'folder' && id) {
+    let folderData = folders[id];
+    if (!folderData) {
+      const lowerId = id.trim().toLowerCase();
+      const realKey = Object.keys(folders).find(k => k.trim().toLowerCase() === lowerId);
+      if (realKey) folderData = folders[realKey];
+    }
+    if (folderData) {
+      dataList = folderData.songs;
+      title = folderData.name;
+      subtitle = 'Carpeta';
+      cover = folderData.cover;
+      audioPath = dataList[0]?.path;
+    }
+  } else if (type === 'artist' && id) {
+    let artistData = artists[id];
+    if (!artistData) {
+      const lowerId = id.trim().toLowerCase();
+      const realKey = Object.keys(artists).find(k => k.trim().toLowerCase() === lowerId);
+      if (realKey) artistData = artists[realKey];
+    }
+    if (artistData) {
+      dataList = artistData.songs;
+      title = artistData.name;
+      subtitle = `${dataList.length} pistas`;
+      cover = artistData.cover;
+      audioPath = undefined;
+    }
   }
 
   const artistAlbums = useMemo(() => {
@@ -117,13 +147,8 @@ export default function ListDetailScreen() {
   const displayList = useMemo(() => {
     if (!dataList) return [];
     if (type !== 'artist') return dataList;
-    const albumSongIds = new Set(artistAlbums.flatMap((a: any) => a.songs.map((s: any) => s.id)));
-    return dataList.filter((s: any) => !albumSongIds.has(s.id));
-  }, [type, dataList, artistAlbums]);
-
-  const initialTopMostItemIndex = useMemo(() => {
-    return Math.max(0, displayList.findIndex((s: any) => s.id === currentSong?.id));
-  }, [type, id, displayList, currentSong]); // Only run when changing routes
+    return dataList; // Return all songs for the artist
+  }, [type, dataList]);
 
   const [scrollParent, setScrollParent] = useState<HTMLElement | null>(null);
 
@@ -152,7 +177,19 @@ export default function ListDetailScreen() {
   };
 
   const handleBack = () => {
-    navigate(-1);
+    if (type === 'artist') {
+      navigate('/artists');
+    } else {
+      navigate(-1);
+    }
+  };
+
+  const openLink = (url: string) => {
+    if (window.api && (window.api as any).openExternal) {
+      (window.api as any).openExternal(url);
+    } else {
+      window.open(url, '_blank');
+    }
   };
 
   return (
@@ -197,7 +234,7 @@ export default function ListDetailScreen() {
         </div>
 
         {/* Text Details */}
-        <div className="mt-6 md:mt-0 md:ml-8 flex flex-col z-10 flex-1 justify-end h-full">
+        <div className="mt-6 md:mt-0 md:ml-8 flex flex-col z-10 flex-1 justify-end h-full w-full">
           <span className="text-sm font-bold uppercase tracking-widest mb-2" style={{ color: colors.text }}>{type === 'album' ? 'Álbum' : type === 'folder' ? 'Carpeta' : 'Artista'}</span>
           <h1 className="text-5xl md:text-8xl font-black text-wrap mb-6 tracking-tighter" style={{ color: colors.text, textShadow: '0 4px 12px rgba(0,0,0,0.1)' }}>{title}</h1>
           <div className="flex flex-row items-center flex-wrap gap-2 text-sm md:text-base font-bold opacity-90" style={{ color: colors.text }}>
@@ -226,10 +263,39 @@ export default function ListDetailScreen() {
               </>
             )}
           </div>
-          {type === 'artist' && artistBio && (
-            <p className="mt-4 text-sm md:text-base opacity-80 max-w-3xl line-clamp-3 hover:line-clamp-none transition-all" style={{ color: colors.text }}>
-              {artistBio}
-            </p>
+          
+          {type === 'artist' && (
+            <div className="mt-6 flex flex-col gap-4">
+              {artistBio && (
+                <div className="bg-black/10 dark:bg-white/5 p-4 rounded-xl border border-black/5 dark:border-white/5">
+                  <h3 className="font-bold text-sm uppercase tracking-wider mb-2 opacity-70" style={{ color: colors.text }}>Acerca de</h3>
+                  <p className="text-sm md:text-base opacity-90 max-w-4xl leading-relaxed" style={{ color: colors.text }}>
+                    {artistBio}
+                  </p>
+                </div>
+              )}
+              
+              <div className="flex flex-row gap-3">
+                <button 
+                  onClick={() => openLink(`https://open.spotify.com/search/${encodeURIComponent(title)}/artists`)}
+                  className="flex items-center gap-2 px-4 py-2 rounded-full bg-[#1DB954]/20 hover:bg-[#1DB954]/30 text-[#1DB954] transition-colors text-sm font-bold"
+                >
+                  <Music size={16} /> Spotify
+                </button>
+                <button 
+                  onClick={() => openLink(`https://www.youtube.com/results?search_query=${encodeURIComponent(title)}`)}
+                  className="flex items-center gap-2 px-4 py-2 rounded-full bg-[#FF0000]/20 hover:bg-[#FF0000]/30 text-[#FF0000] transition-colors text-sm font-bold"
+                >
+                  <ExternalLink size={16} /> YouTube
+                </button>
+                <button 
+                  onClick={() => openLink(`https://music.apple.com/us/search?term=${encodeURIComponent(title)}`)}
+                  className="flex items-center gap-2 px-4 py-2 rounded-full bg-[#FA243C]/20 hover:bg-[#FA243C]/30 text-[#FA243C] transition-colors text-sm font-bold"
+                >
+                  <ExternalLink size={16} /> Apple Music
+                </button>
+              </div>
+            </div>
           )}
         </div>
       </div>
@@ -292,10 +358,12 @@ export default function ListDetailScreen() {
       )}
 
       {/* Track List */}
-      {/* Track List Header (Spotify Style) */}
       <div className="flex-1 flex flex-col">
         {displayList.length > 0 && (
-          <div className="px-8 mb-4">
+          <div className="px-8 mb-4 mt-2">
+            {type === 'artist' && (
+              <h2 className="text-2xl font-bold mb-6" style={{ color: colors.text }}>Todas las canciones</h2>
+            )}
             <div className="flex flex-row items-center px-3 py-2 border-b border-white/10 text-sm font-bold opacity-70" style={{ color: colors.text }}>
               <div className="w-10 text-center">#</div>
               <div className="flex-1 ml-4">Título</div>
@@ -308,7 +376,6 @@ export default function ListDetailScreen() {
           <Virtuoso
             customScrollParent={scrollParent}
             data={displayList}
-            initialTopMostItemIndex={initialTopMostItemIndex}
             className="px-8"
             components={{
               Footer: () => <div style={{ height: '120px' }} />

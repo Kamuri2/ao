@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { Sun, Moon, Settings, ListMusic, Shuffle, Activity, Search, RefreshCw, Mic2 } from 'lucide-react';
 import { useAudio } from '../context/AudioContext';
 import { useTheme } from '../context/ThemeContext';
@@ -45,7 +45,6 @@ export default function HomeScreen() {
   const { songs, albums, artists, playSound, playWithShuffle, currentSong, loadSongsFromUri, queueLength, queuePosition } = useAudio();
   const { colors, isDarkMode, toggleTheme } = useTheme();
   const navigate = useNavigate();
-  const location = useLocation();
   const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {

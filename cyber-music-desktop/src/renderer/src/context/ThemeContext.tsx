@@ -1,4 +1,6 @@
+/* eslint-disable react-refresh/only-export-components, react-hooks/set-state-in-effect, react/prop-types */
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import ParticlesBackground from '../components/ParticlesBackground';
 
 export type ThemeColors = {
   background: string;
@@ -32,6 +34,13 @@ export const baseThemes = [
   { id: 'synthwave', name: 'Synthwave' },
   { id: 'midnight', name: 'Midnight (OLED)' },
   { id: 'ruby', name: 'Crimson Ruby' },
+  { id: 'forest', name: 'Forest' },
+  { id: 'amethyst', name: 'Amethyst' },
+  { id: 'volcano', name: 'Volcano' },
+  { id: 'coffee', name: 'Coffee' },
+  { id: 'gold', name: 'Gold' },
+  { id: 'neon', name: 'Neon' },
+  { id: 'mono', name: 'Monochrome' },
 ];
 
 export const themes: Record<string, ThemeDefinition> = {
@@ -58,7 +67,21 @@ export const themes: Record<string, ThemeDefinition> = {
   midnightLight: { id: 'midnightLight', name: 'Midnight Claro', isDark: false, colors: { background: '#f8f9fa', card: '#ffffff', text: '#212529', subText: '#6c757d', border: '#e9ecef', primary: '#495057', secondary: '#adb5bd', accent: '#343a40', shadow: '#000000' } },
   midnightDark: { id: 'midnightDark', name: 'Midnight Oscuro (OLED)', isDark: true, colors: { background: '#000000', card: '#0a0a0a', text: '#f8f9fa', subText: '#868e96', border: '#1f1f1f', primary: '#e9ecef', secondary: '#adb5bd', accent: '#ffffff', shadow: '#000000' } },
   rubyLight: { id: 'rubyLight', name: 'Ruby Claro', isDark: false, colors: { background: '#fcf2f2', card: '#ffffff', text: '#4a151b', subText: '#8f4b53', border: '#f2d8da', primary: '#e63946', secondary: '#f4a261', accent: '#d90429', shadow: '#000000' } },
-  rubyDark: { id: 'rubyDark', name: 'Ruby Oscuro', isDark: true, colors: { background: '#170608', card: '#2b0f13', text: '#ffe6e9', subText: '#b3777f', border: '#4d1e25', primary: '#e63946', secondary: '#f1faee', accent: '#ef233c', shadow: '#000000' } }
+  rubyDark: { id: 'rubyDark', name: 'Ruby Oscuro', isDark: true, colors: { background: '#170608', card: '#2b0f13', text: '#ffe6e9', subText: '#b3777f', border: '#4d1e25', primary: '#e63946', secondary: '#f1faee', accent: '#ef233c', shadow: '#000000' } },
+  forestLight: { id: 'forestLight', name: 'Forest Claro', isDark: false, colors: { background: '#eaf4e5', card: '#ffffff', text: '#1b3b22', subText: '#4c7052', border: '#c3dec7', primary: '#2d6a4f', secondary: '#52b788', accent: '#1b4332', shadow: '#000000' } },
+  forestDark: { id: 'forestDark', name: 'Forest Oscuro', isDark: true, colors: { background: '#081c15', card: '#1b4332', text: '#d8f3dc', subText: '#74c69d', border: '#2d6a4f', primary: '#40916c', secondary: '#52b788', accent: '#95d5b2', shadow: '#000000' } },
+  amethystLight: { id: 'amethystLight', name: 'Amethyst Claro', isDark: false, colors: { background: '#f4f0fa', card: '#ffffff', text: '#311b54', subText: '#684d94', border: '#d9c6f2', primary: '#7b2cbf', secondary: '#9d4edd', accent: '#c77dff', shadow: '#000000' } },
+  amethystDark: { id: 'amethystDark', name: 'Amethyst Oscuro', isDark: true, colors: { background: '#10002b', card: '#240046', text: '#e0aaff', subText: '#c77dff', border: '#3c096c', primary: '#9d4edd', secondary: '#7b2cbf', accent: '#e0aaff', shadow: '#000000' } },
+  volcanoLight: { id: 'volcanoLight', name: 'Volcano Claro', isDark: false, colors: { background: '#ffedea', card: '#ffffff', text: '#3a0c05', subText: '#872314', border: '#f7c3bc', primary: '#d00000', secondary: '#dc2f02', accent: '#9d0208', shadow: '#000000' } },
+  volcanoDark: { id: 'volcanoDark', name: 'Volcano Oscuro', isDark: true, colors: { background: '#1c0303', card: '#370617', text: '#ffba08', subText: '#dc2f02', border: '#6a040f', primary: '#e85d04', secondary: '#f48c06', accent: '#ffba08', shadow: '#000000' } },
+  coffeeLight: { id: 'coffeeLight', name: 'Coffee Claro', isDark: false, colors: { background: '#f5ebe0', card: '#ffffff', text: '#403d39', subText: '#7a6859', border: '#e3d5ca', primary: '#b08968', secondary: '#ddb892', accent: '#9c6644', shadow: '#000000' } },
+  coffeeDark: { id: 'coffeeDark', name: 'Coffee Oscuro', isDark: true, colors: { background: '#211d1a', card: '#3a342e', text: '#eadecf', subText: '#a4988c', border: '#4a443e', primary: '#c9a27e', secondary: '#b08968', accent: '#7f5539', shadow: '#000000' } },
+  goldLight: { id: 'goldLight', name: 'Gold Claro', isDark: false, colors: { background: '#fdfbf7', card: '#ffffff', text: '#453813', subText: '#8c7639', border: '#e8ddb7', primary: '#d4af37', secondary: '#e6c86a', accent: '#aa8c2c', shadow: '#000000' } },
+  goldDark: { id: 'goldDark', name: 'Gold Oscuro', isDark: true, colors: { background: '#1c1912', card: '#2e2a1f', text: '#fcf3d7', subText: '#c2ae72', border: '#4a422a', primary: '#d4af37', secondary: '#f0db8e', accent: '#f7ebaf', shadow: '#000000' } },
+  neonLight: { id: 'neonLight', name: 'Neon Claro', isDark: false, colors: { background: '#f0fdf4', card: '#ffffff', text: '#0f172a', subText: '#475569', border: '#bbf7d0', primary: '#22c55e', secondary: '#3b82f6', accent: '#ec4899', shadow: '#000000' } },
+  neonDark: { id: 'neonDark', name: 'Neon Oscuro', isDark: true, colors: { background: '#020617', card: '#0f172a', text: '#f1f5f9', subText: '#94a3b8', border: '#1e293b', primary: '#39ff14', secondary: '#ff00ff', accent: '#00ffff', shadow: '#000000' } },
+  monoLight: { id: 'monoLight', name: 'Mono Claro', isDark: false, colors: { background: '#ffffff', card: '#f5f5f5', text: '#000000', subText: '#666666', border: '#e0e0e0', primary: '#000000', secondary: '#333333', accent: '#999999', shadow: '#000000' } },
+  monoDark: { id: 'monoDark', name: 'Mono Oscuro', isDark: true, colors: { background: '#000000', card: '#111111', text: '#ffffff', subText: '#aaaaaa', border: '#333333', primary: '#ffffff', secondary: '#cccccc', accent: '#666666', shadow: '#000000' } },
 };
 
 export type ParticleType = 'none' | 'snow' | 'bubbles' | 'stars';
@@ -93,7 +116,7 @@ const ThemeContext = createContext<ThemeContextType>({
   pickBackgroundImage: async () => {},
 });
 
-export const useTheme = () => useContext(ThemeContext);
+export const useTheme = (): ThemeContextType => useContext(ThemeContext);
 
 export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [themeFamily, setThemeFamilyState] = useState<string>('mint');
@@ -115,13 +138,13 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     if (bg) setBackgroundImageState(bg);
   }, []);
 
-  const setBackgroundImage = (uri: string | null) => {
+  const setBackgroundImage = (uri: string | null): void => {
     setBackgroundImageState(uri);
     if (uri) localStorage.setItem('@background_image', uri);
     else localStorage.removeItem('@background_image');
   };
 
-  const pickBackgroundImage = async () => {
+  const pickBackgroundImage = async (): Promise<void> => {
     const input = document.createElement('input');
     input.type = 'file';
     input.accept = 'image/*';
@@ -140,22 +163,22 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     input.click();
   };
 
-  const setThemeFamily = (family: string) => {
+  const setThemeFamily = (family: string): void => {
     setThemeFamilyState(family);
     localStorage.setItem('@theme_family', family);
   };
 
-  const setIsDarkMode = (dark: boolean) => {
+  const setIsDarkMode = (dark: boolean): void => {
     setIsDarkModeState(dark);
     localStorage.setItem('@is_dark_mode', dark ? 'true' : 'false');
   };
 
-  const setParticles = (type: ParticleType) => {
+  const setParticles = (type: ParticleType): void => {
     setParticlesState(type);
     localStorage.setItem('@particles', type);
   };
 
-  const toggleTheme = () => {
+  const toggleTheme = (): void => {
     setIsDarkMode(!isDarkMode);
   };
 
@@ -195,6 +218,13 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
              zIndex: 0
            }} />
         )}
+        
+        {particles !== 'none' && (
+          <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, zIndex: 0, pointerEvents: 'none', overflow: 'hidden' }}>
+            <ParticlesBackground type={particles} />
+          </div>
+        )}
+
         <div style={{ position: 'relative', zIndex: 1, height: '100%' }}>
           {children}
         </div>

@@ -152,21 +152,43 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     // Pre-load the artist image cache to prevent flickering
     const artistCache = await window.api.getArtistCache();
 
+    let albumKeyMap: Record<string, string> = {};
+    let artistKeyMap: Record<string, string> = {};
+
     formattedSongs.forEach(song => {
       let fName = song.folder || 'Desconocido';
       if (!foldersObj[fName]) foldersObj[fName] = { name: fName, cover: song.cover || null, songs: [] };
       foldersObj[fName].songs.push(song);
 
-      let aName = song.album || 'Desconocido';
-      if (!albumsObj[aName]) albumsObj[aName] = { name: aName, artist: song.artist || 'Desconocido', cover: song.cover || null, songs: [], year: song.year };
+      // Normalize Artist
+      let rawArtist = song.artist || 'Desconocido';
+      let normArtist = rawArtist.trim().toLowerCase();
+      let artName = artistKeyMap[normArtist];
+      if (!artName) {
+        artName = rawArtist.trim();
+        artistKeyMap[normArtist] = artName;
+      }
+
+      // Normalize Album
+      let rawAlbum = song.album || 'Desconocido';
+      let normAlbum = rawAlbum.trim().toLowerCase();
+      let aName = albumKeyMap[normAlbum];
+      if (!aName) {
+        aName = rawAlbum.trim();
+        albumKeyMap[normAlbum] = aName;
+      }
+
+      // Update the song object to use the canonical names so navigation matches perfectly
+      song.artist = artName;
+      song.album = aName;
+
+      if (!albumsObj[aName]) albumsObj[aName] = { name: aName, artist: artName, cover: song.cover || null, songs: [], year: song.year };
       albumsObj[aName].songs.push(song);
 
-      let artName = song.artist || 'Desconocido';
       if (!artistsObj[artName]) {
-        const normName = artName.trim().toLowerCase();
         let coverUrl = song.cover || null;
-        if (artistCache && artistCache[normName]) {
-          coverUrl = artistCache[normName];
+        if (artistCache && artistCache[normArtist]) {
+          coverUrl = artistCache[normArtist];
         }
         artistsObj[artName] = { name: artName, cover: coverUrl, songs: [] };
       }

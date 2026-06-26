@@ -1,11 +1,11 @@
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, FolderOpen, Trash2, RefreshCw } from 'lucide-react';
-import { useTheme } from '../context/ThemeContext';
+import { useTheme, baseThemes, ParticleType } from '../context/ThemeContext';
 import { useAudio } from '../context/AudioContext';
 
 export default function SettingsScreen() {
   const navigate = useNavigate();
-  const { colors, isDarkMode, toggleTheme } = useTheme();
+  const { colors, isDarkMode, toggleTheme, themeFamily, setThemeFamily, particles, setParticles } = useTheme();
   const { loadSongsFromUri, songs, isScanning, isCrossfadeEnabled, setIsCrossfadeEnabled, crossfadeDuration, setCrossfadeDuration } = useAudio();
   const currentFolder = localStorage.getItem('@music_folder');
 
@@ -30,16 +30,52 @@ export default function SettingsScreen() {
 
       <div className="space-y-6">
         <div className="p-6 rounded-2xl border border-white/10 shadow-sm" style={{ backgroundColor: isDarkMode ? '#1e1e1e' : '#ffffff' }}>
-          <h2 className="text-xl font-bold mb-4" style={{ color: colors.text }}>Apariencia</h2>
-          <div className="flex flex-row items-center justify-between">
+          <h2 className="text-xl font-bold mb-4" style={{ color: colors.text }}>Apariencia y Temas</h2>
+          <div className="flex flex-row items-center justify-between mb-6">
             <span className="font-medium" style={{ color: colors.subText }}>Modo Oscuro</span>
             <button 
               className="px-4 py-2 rounded-lg font-bold transition-transform active:scale-95"
               style={{ backgroundColor: colors.primary, color: '#000' }}
               onClick={toggleTheme}
             >
-              Cambiar Tema
+              {isDarkMode ? 'Activo' : 'Inactivo'}
             </button>
+          </div>
+
+          <span className="font-medium mb-3 block" style={{ color: colors.subText }}>Tema Global</span>
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 mb-6">
+            {baseThemes.map(theme => (
+              <button
+                key={theme.id}
+                onClick={() => setThemeFamily(theme.id)}
+                className={`p-3 rounded-xl border text-sm font-bold transition-all flex items-center justify-center ${themeFamily === theme.id ? 'scale-105 shadow-md' : 'opacity-70 hover:opacity-100'}`}
+                style={{ 
+                  backgroundColor: themeFamily === theme.id ? colors.primary : 'transparent',
+                  borderColor: themeFamily === theme.id ? colors.primary : colors.border,
+                  color: themeFamily === theme.id ? '#000' : colors.text
+                }}
+              >
+                {theme.name}
+              </button>
+            ))}
+          </div>
+
+          <span className="font-medium mb-3 block" style={{ color: colors.subText }}>Efectos de Partículas</span>
+          <div className="flex flex-row gap-3 flex-wrap">
+            {(['none', 'snow', 'bubbles', 'stars'] as ParticleType[]).map(pType => (
+              <button
+                key={pType}
+                onClick={() => setParticles(pType)}
+                className={`px-4 py-2 rounded-lg border text-sm font-bold transition-all capitalize ${particles === pType ? 'scale-105 shadow-md' : 'opacity-70 hover:opacity-100'}`}
+                style={{ 
+                  backgroundColor: particles === pType ? colors.primary : 'transparent',
+                  borderColor: particles === pType ? colors.primary : colors.border,
+                  color: particles === pType ? '#000' : colors.text
+                }}
+              >
+                {pType === 'none' ? 'Ninguno' : pType === 'snow' ? 'Nieve' : pType === 'bubbles' ? 'Burbujas' : 'Estrellas'}
+              </button>
+            ))}
           </div>
         </div>
 

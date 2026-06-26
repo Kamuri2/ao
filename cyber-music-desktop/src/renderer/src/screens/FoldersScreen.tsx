@@ -2,16 +2,14 @@ import { useAudio } from '../context/AudioContext';
 import { useTheme } from '../context/ThemeContext';
 import CoverImage from '../components/CoverImage';
 import { Folder } from 'lucide-react';
-import { motion } from 'framer-motion';
-
-import { useNavigate, useLocation } from 'react-router-dom';
+// @ts-ignore
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 
 export default function FoldersScreen() {
   const { folders } = useAudio();
   const theme = useTheme();
   const navigate = useNavigate();
-  const location = useLocation();
 
   return (
     <div className="flex-1 px-8 py-8 max-w-full w-full animate-fade-in">
