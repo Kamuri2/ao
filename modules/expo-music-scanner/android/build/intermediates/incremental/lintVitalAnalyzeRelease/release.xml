@@ -6,7 +6,7 @@
     mergedManifest="build\intermediates\merged_manifest\release\processReleaseManifest\AndroidManifest.xml"
     proguardFiles="build\intermediates\default_proguard_files\global\proguard-android.txt-8.12.0"
     partialResultsDir="build\intermediates\lint_vital_partial_results\release\lintVitalAnalyzeRelease\out"
-    desugaredMethodsFiles="C:\Users\kevin\.gradle\caches\9.3.1\transforms\7697dc91136e08a1841091e17abe14b0\workspace\transformed\D8BackportedDesugaredMethods.txt">
+    desugaredMethodsFiles="C:\Users\kevin\.gradle\caches\9.3.1\transforms\f9cb70c778e8423fe0990a3e868d35b1\workspace\transformed\D8BackportedDesugaredMethods.txt">
   <buildFeatures
       namespacing="REQUIRED"/>
   <sourceProviders>
@@ -26,6 +26,6 @@
       applicationId="expo.modules.musicscanner"
       generatedSourceFolders="build\generated\ap_generated_sources\release\out;build\generated\source\buildConfig\release"
       generatedResourceFolders="build\generated\res\resValues\release"
-      desugaredMethodsFiles="C:\Users\kevin\.gradle\caches\9.3.1\transforms\7697dc91136e08a1841091e17abe14b0\workspace\transformed\D8BackportedDesugaredMethods.txt">
+      desugaredMethodsFiles="C:\Users\kevin\.gradle\caches\9.3.1\transforms\f9cb70c778e8423fe0990a3e868d35b1\workspace\transformed\D8BackportedDesugaredMethods.txt">
   </artifact>
 </variant>

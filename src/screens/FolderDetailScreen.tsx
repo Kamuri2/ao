@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useTheme } from '../context/ThemeContext';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity } from 'react-native';
 import type { ListRenderItemInfo } from 'react-native';
@@ -12,6 +12,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 
 const SongListItem = React.memo(({
   item,
+  index,
   isPlayingThis,
   playSound,
   folderName,
@@ -19,17 +20,26 @@ const SongListItem = React.memo(({
   colors,
   styles
 }: any) => {
+  const formatDuration = (seconds: number) => {
+    if (!seconds) return '';
+    const m = Math.floor(seconds / 60);
+    const s = Math.floor(seconds % 60);
+    return `${m}:${s.toString().padStart(2, '0')}`;
+  };
+
   return (
     <View style={styles.songCardWrapper}>
       <TouchableOpacity
         style={[
           styles.songItemContent,
-          { backgroundColor: colors.card },
-          isPlayingThis && styles.songItemActiveWrapper
+          isPlayingThis && { backgroundColor: colors.primary + '33' }
         ]}
         onPress={() => playSound(item, folderName, songs)}
         activeOpacity={0.7}
       >
+        <Text style={[styles.songIndex, { color: isPlayingThis ? colors.primary : colors.text }]}>
+          {index + 1}
+        </Text>
         <CoverImage
           coverUrl={item.cover}
           style={[styles.thumbnail]}
@@ -38,13 +48,18 @@ const SongListItem = React.memo(({
           audioUri={item.uri}
         />
         <View style={styles.songInfo}>
-          <Text style={[styles.songTitle, { color: colors.text }, isPlayingThis && styles.songTitleActive]} numberOfLines={1}>
+          <Text style={[styles.songTitle, { color: isPlayingThis ? colors.primary : colors.text }]} numberOfLines={1}>
             {item.title || item.filename}
           </Text>
-          <Text style={[styles.songArtist, { color: colors.subText }]} numberOfLines={1}>
+          <Text style={[styles.songArtist, { color: colors.text, opacity: 0.7 }]} numberOfLines={1}>
             {item.artist || 'Desconocido'}
           </Text>
         </View>
+        {item.duration > 0 && (
+          <Text style={[styles.songDuration, { color: colors.text }]}>
+            {formatDuration(item.duration)}
+          </Text>
+        )}
       </TouchableOpacity>
     </View>
   );
@@ -59,6 +74,23 @@ export default function FolderDetailScreen({ route, navigation }: any) {
   const { folderName, isAlbum, isPlaylist, isArtist } = route.params;
   const { folders, albums, artists, playlists, songs: allSongs, playSound, playWithShuffle, currentSong } = useAudio();
   const insets = useSafeAreaInsets();
+  
+  const [artistBio, setArtistBio] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (isArtist && folderName && folderName !== 'Desconocido') {
+      fetch(`https://es.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(folderName)}`)
+        .then(res => res.json())
+        .then(data => {
+          if (data && data.extract) {
+            setArtistBio(data.extract);
+          }
+        })
+        .catch(() => setArtistBio(null));
+    } else {
+      setArtistBio(null);
+    }
+  }, [isArtist, folderName]);
 
   let songs = [];
   let screenTitle = folderName;
@@ -96,10 +128,11 @@ export default function FolderDetailScreen({ route, navigation }: any) {
     index,
   });
 
-  const renderItem = React.useCallback(({ item }: ListRenderItemInfo<Song>) => {
+  const renderItem = React.useCallback(({ item, index }: ListRenderItemInfo<Song>) => {
     return (
       <SongListItem
         item={item}
+        index={index}
         isPlayingThis={currentSong?.id === item.id}
         playSound={playSound}
         folderName={folderName}
@@ -135,12 +168,18 @@ export default function FolderDetailScreen({ route, navigation }: any) {
               audioUri={songs.length > 0 ? songs[0].uri : undefined}
             />
             <LinearGradient
-              colors={['rgba(0,0,0,0.4)', 'transparent', 'rgba(0,0,0,0.95)']}
+              colors={[`${colors.primary}99`, colors.background]}
               style={StyleSheet.absoluteFill}
             />
             <View style={styles.heroTextContainer}>
               <Text style={styles.heroTitle} numberOfLines={2}>{screenTitle}</Text>
               <Text style={styles.heroSubtitle}>{isArtist ? 'Top canciones' : `${songs.length} canciones`}</Text>
+              
+              {isArtist && artistBio && (
+                <Text style={[styles.artistBio, { color: '#E0E0E0' }]} numberOfLines={3}>
+                  {artistBio}
+                </Text>
+              )}
 
               <View style={styles.actionRow}>
                 <TouchableOpacity
@@ -162,6 +201,15 @@ export default function FolderDetailScreen({ route, navigation }: any) {
                 </TouchableOpacity>
               </View>
             </View>
+            
+            {/* Spotify style Tracklist header */}
+            {songs.length > 0 && (
+              <View style={[styles.tracklistHeader, { borderBottomColor: colors.border }]}>
+                <Text style={[styles.tracklistHeaderText, { width: 30, textAlign: 'center', color: colors.text, opacity: 0.5 }]}>#</Text>
+                <Text style={[styles.tracklistHeaderText, { flex: 1, marginLeft: 10, color: colors.text, opacity: 0.5 }]}>Título</Text>
+                <Ionicons name="time-outline" size={16} color={colors.text} style={{ opacity: 0.5, marginRight: 15 }} />
+              </View>
+            )}
           </View>
         }
         ListFooterComponent={
@@ -201,6 +249,36 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#F5F5F5',
+  },
+  artistBio: {
+    fontSize: 14,
+    marginTop: 10,
+    lineHeight: 20,
+    marginBottom: 5,
+  },
+  tracklistHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 15,
+    paddingVertical: 10,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    marginBottom: 10,
+  },
+  tracklistHeaderText: {
+    fontSize: 12,
+    fontWeight: 'bold',
+    textTransform: 'uppercase',
+  },
+  songIndex: {
+    width: 30,
+    textAlign: 'center',
+    fontSize: 14,
+    fontWeight: 'bold',
+  },
+  songDuration: {
+    fontSize: 13,
+    opacity: 0.5,
+    fontWeight: '500',
   },
   floatingBackButton: {
     position: 'absolute',

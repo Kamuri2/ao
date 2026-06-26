@@ -26,6 +26,12 @@ export const baseThemes = [
   { id: 'sunset', name: 'Sunset' },
   { id: 'lavender', name: 'Lavender' },
   { id: 'frutigerAero', name: 'Frutiger Aero (Glass)' },
+  { id: 'dracula', name: 'Dracula' },
+  { id: 'nord', name: 'Nordic Ice' },
+  { id: 'matcha', name: 'Matcha Tea' },
+  { id: 'synthwave', name: 'Synthwave' },
+  { id: 'midnight', name: 'Midnight (OLED)' },
+  { id: 'ruby', name: 'Crimson Ruby' },
 ];
 
 export const themes: Record<string, ThemeDefinition> = {
@@ -40,7 +46,19 @@ export const themes: Record<string, ThemeDefinition> = {
   lavenderLight: { id: 'lavenderLight', name: 'Lavanda Claro', isDark: false, colors: { background: '#f5f0fa', card: '#ffffff', text: '#3b2a4f', subText: '#6b5884', border: '#e6d9f2', primary: '#8b5fd6', secondary: '#b890eb', accent: '#ff7597', shadow: '#000000' } },
   lavenderDark: { id: 'lavenderDark', name: 'Lavanda Oscuro', isDark: true, colors: { background: '#130e1a', card: '#1f1629', text: '#f3e8ff', subText: '#c4b5fd', border: '#3b2f4f', primary: '#a855f7', secondary: '#c084fc', accent: '#f472b6', shadow: '#000000' } },
   frutigerAeroLight: { id: 'frutigerAeroLight', name: 'Frutiger Aero Claro', isDark: false, colors: { background: '#e0f7fa', card: 'rgba(255, 255, 255, 0.7)', text: '#004d40', subText: '#00796b', border: 'rgba(255, 255, 255, 0.8)', primary: '#00e5ff', secondary: '#69f0ae', accent: '#b2ebf2', shadow: '#000000' } },
-  frutigerAeroDark: { id: 'frutigerAeroDark', name: 'Frutiger Aero Oscuro', isDark: true, colors: { background: '#001a1c', card: 'rgba(0, 30, 40, 0.6)', text: '#e0f7fa', subText: '#80cbc4', border: 'rgba(0, 229, 255, 0.3)', primary: '#00e5ff', secondary: '#00bfa5', accent: '#18ffff', shadow: '#000000' } }
+  frutigerAeroDark: { id: 'frutigerAeroDark', name: 'Frutiger Aero Oscuro', isDark: true, colors: { background: '#001a1c', card: 'rgba(0, 30, 40, 0.6)', text: '#e0f7fa', subText: '#80cbc4', border: 'rgba(0, 229, 255, 0.3)', primary: '#00e5ff', secondary: '#00bfa5', accent: '#18ffff', shadow: '#000000' } },
+  draculaLight: { id: 'draculaLight', name: 'Dracula Claro', isDark: false, colors: { background: '#f8f8f2', card: '#ffffff', text: '#282a36', subText: '#6272a4', border: '#e2e2dc', primary: '#ff79c6', secondary: '#bd93f9', accent: '#ffb86c', shadow: '#000000' } },
+  draculaDark: { id: 'draculaDark', name: 'Dracula Oscuro', isDark: true, colors: { background: '#282a36', card: '#44475a', text: '#f8f8f2', subText: '#6272a4', border: '#3e4053', primary: '#ff79c6', secondary: '#bd93f9', accent: '#50fa7b', shadow: '#000000' } },
+  nordLight: { id: 'nordLight', name: 'Nord Claro', isDark: false, colors: { background: '#eceff4', card: '#ffffff', text: '#2e3440', subText: '#4c566a', border: '#e5e9f0', primary: '#5e81ac', secondary: '#81a1c1', accent: '#88c0d0', shadow: '#000000' } },
+  nordDark: { id: 'nordDark', name: 'Nord Oscuro', isDark: true, colors: { background: '#2e3440', card: '#3b4252', text: '#eceff4', subText: '#d8dee9', border: '#434c5e', primary: '#88c0d0', secondary: '#81a1c1', accent: '#a3be8c', shadow: '#000000' } },
+  matchaLight: { id: 'matchaLight', name: 'Matcha Claro', isDark: false, colors: { background: '#f4f6f0', card: '#ffffff', text: '#3e4e3b', subText: '#7b8c76', border: '#e3e8de', primary: '#8da37b', secondary: '#a6b896', accent: '#c4d4b4', shadow: '#000000' } },
+  matchaDark: { id: 'matchaDark', name: 'Matcha Oscuro', isDark: true, colors: { background: '#1c221a', card: '#252e23', text: '#e8ece6', subText: '#9ca998', border: '#2e382b', primary: '#8da37b', secondary: '#a6b896', accent: '#d2deb2', shadow: '#000000' } },
+  synthwaveLight: { id: 'synthwaveLight', name: 'Synthwave Claro', isDark: false, colors: { background: '#fdf6e3', card: '#ffffff', text: '#2b213a', subText: '#685987', border: '#f0e6fa', primary: '#ff2a6d', secondary: '#05d9e8', accent: '#ffb200', shadow: '#ff2a6d' } },
+  synthwaveDark: { id: 'synthwaveDark', name: 'Synthwave Oscuro', isDark: true, colors: { background: '#120422', card: '#1b0a33', text: '#05d9e8', subText: '#d1c1eb', border: '#33135c', primary: '#ff2a6d', secondary: '#05d9e8', accent: '#01ffe5', shadow: '#ff2a6d' } },
+  midnightLight: { id: 'midnightLight', name: 'Midnight Claro', isDark: false, colors: { background: '#f8f9fa', card: '#ffffff', text: '#212529', subText: '#6c757d', border: '#e9ecef', primary: '#495057', secondary: '#adb5bd', accent: '#343a40', shadow: '#000000' } },
+  midnightDark: { id: 'midnightDark', name: 'Midnight Oscuro (OLED)', isDark: true, colors: { background: '#000000', card: '#0a0a0a', text: '#f8f9fa', subText: '#868e96', border: '#1f1f1f', primary: '#e9ecef', secondary: '#adb5bd', accent: '#ffffff', shadow: '#000000' } },
+  rubyLight: { id: 'rubyLight', name: 'Ruby Claro', isDark: false, colors: { background: '#fcf2f2', card: '#ffffff', text: '#4a151b', subText: '#8f4b53', border: '#f2d8da', primary: '#e63946', secondary: '#f4a261', accent: '#d90429', shadow: '#000000' } },
+  rubyDark: { id: 'rubyDark', name: 'Ruby Oscuro', isDark: true, colors: { background: '#170608', card: '#2b0f13', text: '#ffe6e9', subText: '#b3777f', border: '#4d1e25', primary: '#e63946', secondary: '#f1faee', accent: '#ef233c', shadow: '#000000' } }
 };
 
 export type ParticleType = 'none' | 'snow' | 'bubbles' | 'stars';
