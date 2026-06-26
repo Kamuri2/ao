@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/explicit-function-return-type, @typescript-eslint/no-unused-vars, prefer-const, no-empty, @typescript-eslint/no-explicit-any, react-hooks/immutability, react-refresh/only-export-components, react-hooks/set-state-in-effect */
 import React, { createContext, useState, useEffect, useContext, useRef } from 'react';
 import { Song, Album, Folder, Artist, AudioContextType, Playlist } from '../types';
 
@@ -49,6 +50,14 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [isPlayerOpen, setIsPlayerOpen] = useState(false);
   const [showLyrics, setShowLyrics] = useState(false);
   const [isCrossfadeEnabled, setIsCrossfadeEnabledState] = useState(true);
+  const [crossfadeDuration, setCrossfadeDurationState] = useState(3);
+  const [toastMessage, setToastMessage] = useState<{ msg: string, type: 'success' | 'error' } | null>(null);
+
+  const showToast = (msg: string, type: 'success' | 'error' = 'success') => {
+    setToastMessage({ msg, type });
+    setTimeout(() => setToastMessage(null), 3000);
+  };
+
   const isCrossfadeEnabledRef = useRef(isCrossfadeEnabled);
   useEffect(() => { isCrossfadeEnabledRef.current = isCrossfadeEnabled; }, [isCrossfadeEnabled]);
 
@@ -57,7 +66,6 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     localStorage.setItem('@crossfade_enabled', enabled.toString());
   };
 
-  const [crossfadeDuration, setCrossfadeDurationState] = useState(3);
   useEffect(() => { crossfadeDurationRef.current = crossfadeDuration; }, [crossfadeDuration]);
 
   const setCrossfadeDuration = (duration: number) => {
@@ -75,10 +83,10 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
       const CROSSFADE_DURATION = crossfadeDurationRef.current;
       if (
-        audio.duration && 
-        audio.duration - audio.currentTime <= CROSSFADE_DURATION && 
-        !isCrossfadingRef.current && 
-        queueRef.current.length > 0 && 
+        audio.duration &&
+        audio.duration - audio.currentTime <= CROSSFADE_DURATION &&
+        !isCrossfadingRef.current &&
+        queueRef.current.length > 0 &&
         repeatModeRef.current !== 'track'
       ) {
         startCrossfade();
@@ -101,7 +109,7 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     const audio = new Audio();
     const secondaryAudio = new Audio();
     attachListeners(audio);
-    
+
     audioRef.current = audio;
     secondaryAudioRef.current = secondaryAudio;
 
@@ -110,15 +118,17 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       if (stored) {
         try {
           const parsed = JSON.parse(stored);
-          if (!parsed.find((p: Playlist) => p.id === 'favorites')) {
-            parsed.unshift({ id: 'favorites', name: 'Me Gusta', songIds: [] });
+          const parsedArray = Array.isArray(parsed) ? parsed : [];
+          const sanitized = parsedArray.map((p: any) => ({ ...p, songIds: Array.isArray(p.songIds) ? p.songIds : [] }));
+          if (!sanitized.find((p: Playlist) => p.id === 'favorites')) {
+            sanitized.unshift({ id: 'favorites', name: 'Me Gusta', songIds: [], isAuto: true });
           }
-          setPlaylists(parsed);
+          setPlaylists(sanitized);
         } catch (e) {
           console.error("Error loading playlists", e);
         }
       } else {
-        setPlaylists([{ id: 'favorites', name: 'Me Gusta', songIds: [] }]);
+        setPlaylists([{ id: 'favorites', name: 'Me Gusta', songIds: [], isAuto: true }]);
       }
 
       const cf = localStorage.getItem('@crossfade_enabled');
@@ -136,19 +146,20 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         const parsed = JSON.parse(cached);
         setSongs(parsed);
         buildLists(parsed);
-      } catch (e) {}
+      } catch (e) { }
     }
-    
+
     if (storedFolder) {
       loadSongsFromUri(storedFolder, true);
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const buildLists = async (formattedSongs: Song[]) => {
     let albumsObj: Record<string, Album> = {};
     let foldersObj: Record<string, Folder> = {};
     let artistsObj: Record<string, Artist> = {};
-    
+
     // Pre-load the artist image cache to prevent flickering
     const artistCache = await window.api.getArtistCache();
 
@@ -199,7 +210,7 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       album.songs.sort((a, b) => {
         const trackA = typeof a.trackNumber === 'number' && a.trackNumber > 0 ? a.trackNumber : 9999;
         const trackB = typeof b.trackNumber === 'number' && b.trackNumber > 0 ? b.trackNumber : 9999;
-        
+
         if (trackA !== trackB) {
           return trackA - trackB;
         }
@@ -224,7 +235,7 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     // Fetch artist profile images asynchronously in batch
     const fetchArtistImages = async () => {
       const artistNames = Object.keys(artistsObj).filter(n => n !== 'Desconocido');
-      
+
       for (const name of artistNames) {
         const url = await window.api.getArtistImage(name);
         if (url && url !== artistsObj[name].cover) {
@@ -241,19 +252,19 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const startCrossfade = () => {
     let nextIndex = currentQueueIndex.current + 1;
     let nextSong: Song | null = null;
-    
+
     if (nextIndex < queueRef.current.length) {
       nextSong = queueRef.current[nextIndex];
     } else if (repeatModeRef.current === 'queue' && queueRef.current.length > 0) {
       nextIndex = 0;
       nextSong = queueRef.current[0];
     }
-    
+
     if (!nextSong || !audioRef.current || !secondaryAudioRef.current) return;
 
     const primary = audioRef.current;
     const secondary = secondaryAudioRef.current;
-    
+
     // UI update immediately (separa la interfaz del audio)
     currentQueueIndex.current = nextIndex;
     setQueuePosition(nextIndex + 1);
@@ -266,13 +277,13 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       primary.pause();
       primary.onended = null;
       primary.volume = 1;
-      
+
       secondary.src = nextSong.uri;
       secondary.volume = 1;
-      
+
       audioRef.current = secondary;
       secondaryAudioRef.current = primary;
-      
+
       attachListeners(audioRef.current);
       audioRef.current.play().catch(e => console.error("Play error", e));
       return;
@@ -292,29 +303,29 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     primary.onended = null;
 
     if (crossfadeTimerRef.current) clearInterval(crossfadeTimerRef.current);
-    
+
     crossfadeTimerRef.current = setInterval(() => {
       currentStep++;
       const fraction = currentStep / steps;
-      
+
       if (primary) primary.volume = Math.max(0, 1 - fraction);
       if (secondary) secondary.volume = Math.min(1, fraction);
 
       if (currentStep >= steps) {
         clearInterval(crossfadeTimerRef.current);
         crossfadeTimerRef.current = null;
-        
+
         clearListeners(primary); // Prevent onpause firing
         primary.pause();
         primary.volume = 1;
-        
+
         // Swap references
         audioRef.current = secondary;
         secondaryAudioRef.current = primary;
-        
+
         attachListeners(audioRef.current);
         setIsPlaying(true); // Ensure UI shows playing, since onplay won't fire for an already playing track
-        
+
         isCrossfadingRef.current = false;
       }
     }, intervalTime);
@@ -345,7 +356,7 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     setIsScanning(true);
     try {
       const nativeSongs = await window.api.readMusicFiles(targetFolder);
-      
+
       const formattedSongs: Song[] = nativeSongs.map((asset: any) => ({
         ...asset,
         duration: 0,
@@ -357,12 +368,58 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         return strA.localeCompare(strB);
       });
 
+      // --- Migrate playlist songIds from old IDs to new IDs ---
+      // Build a path→newId map from the freshly scanned songs
+      const pathToNewId: Record<string, string> = {};
+      for (const s of formattedSongs) {
+        pathToNewId[s.path] = s.id;
+      }
+
+      // Build an oldId→path map from the previously cached songs
+      const oldIdToPath: Record<string, string> = {};
+      try {
+        const oldCached = localStorage.getItem('@cached_songs');
+        if (oldCached) {
+          const oldSongs = JSON.parse(oldCached);
+          if (Array.isArray(oldSongs)) {
+            for (const os of oldSongs) {
+              if (os.id && os.path) {
+                oldIdToPath[os.id] = os.path;
+              }
+            }
+          }
+        }
+      } catch {}
+
+      // Migrate playlists: translate old songIds to new songIds via path matching
+      const needsMigration = Object.keys(oldIdToPath).length > 0;
+      if (needsMigration) {
+        savePlaylists(prev => prev.map(playlist => {
+          const migratedIds = playlist.songIds.map(oldSongId => {
+            // If the old ID already matches a new song, keep it
+            if (pathToNewId[oldIdToPath[oldSongId]] !== undefined) {
+              return pathToNewId[oldIdToPath[oldSongId]];
+            }
+            // Check if it's already a valid new ID
+            if (formattedSongs.some(s => s.id === oldSongId)) {
+              return oldSongId;
+            }
+            // ID couldn't be migrated — drop it
+            return null;
+          }).filter((id): id is string => id !== null);
+          // Remove duplicates that could arise from migration
+          const uniqueIds = [...new Set(migratedIds)];
+          return { ...playlist, songIds: uniqueIds };
+        }));
+      }
+      // --- End migration ---
+
       setSongs(formattedSongs);
       buildLists(formattedSongs);
 
       try {
         localStorage.setItem('@cached_songs', JSON.stringify(formattedSongs));
-      } catch(e) {}
+      } catch (e) { }
     } catch (e) {
       console.error("Error loading songs:", e);
     } finally {
@@ -374,48 +431,71 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     await loadSongsFromUri();
   };
 
-  const savePlaylists = (newPlaylists: Playlist[]) => {
-    setPlaylists(newPlaylists);
-    localStorage.setItem('@playlists', JSON.stringify(newPlaylists));
+  const savePlaylists = (updater: (prev: Playlist[]) => Playlist[]) => {
+    setPlaylists(prev => {
+      const updated = updater(prev);
+      localStorage.setItem('@playlists', JSON.stringify(updated));
+      return updated;
+    });
   };
 
-  const createPlaylist = async (name: string) => {
-    const newPlaylist: Playlist = { id: Date.now().toString(), name, songIds: [] };
-    savePlaylists([...playlists, newPlaylist]);
+  const createPlaylist = async (name: string, description?: string, cover?: string) => {
+    try {
+      savePlaylists(prev => {
+        const newPlaylist: Playlist = { id: Date.now().toString(), name, description, cover, songIds: [] };
+        return [...prev, newPlaylist];
+      });
+      showToast(`Lista "${name}" creada con éxito.`);
+      return;
+    } catch {
+      showToast(`Error al crear la lista "${name}".`, 'error');
+    }
   };
 
   const deletePlaylist = async (id: string) => {
     if (id === 'favorites') return;
-    savePlaylists(playlists.filter(p => p.id !== id));
+    savePlaylists(prev => prev.filter(p => p.id !== id));
   };
 
   const addSongToPlaylist = async (playlistId: string, songId: string) => {
     const song = songs.find(s => s.id === songId);
-    const updated = playlists.map(p => {
+    const target = playlists.find(p => p.id === playlistId);
+
+    if (target) {
+      if (target.songIds.includes(songId)) {
+        showToast(`La canción ya estaba en "${target.name}".`, 'error');
+      } else {
+        showToast(`Canción añadida a "${target.name}".`);
+      }
+    }
+
+    savePlaylists(prev => prev.map(p => {
       if (p.id === playlistId && !p.songIds.includes(songId)) {
         return { ...p, songIds: [...p.songIds, songId], cover: p.cover ? p.cover : (song?.cover || null) };
       }
       return p;
-    });
-    savePlaylists(updated);
+    }));
   };
 
   const removeSongFromPlaylist = async (playlistId: string, songId: string) => {
-    const updated = playlists.map(p => {
+    const target = playlists.find(p => p.id === playlistId);
+    if (target) {
+      showToast(`Canción eliminada de "${target.name}".`);
+    }
+
+    savePlaylists(prev => prev.map(p => {
       if (p.id === playlistId) {
         return { ...p, songIds: p.songIds.filter(id => id !== songId) };
       }
       return p;
-    });
-    savePlaylists(updated);
+    }));
   };
 
   const updatePlaylistCover = async (playlistId: string, coverUri: string) => {
-    const updated = playlists.map(p => {
+    savePlaylists(prev => prev.map(p => {
       if (p.id === playlistId) return { ...p, cover: coverUri };
       return p;
-    });
-    savePlaylists(updated);
+    }));
   };
 
   const toggleFavorite = async (songId: string) => {
@@ -461,12 +541,12 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
 
     if (rebuildQueue) {
-      let targetList = contextList && contextList.length > 0 ? contextList : songs;
-      let targetContextId = contextId || 'all';
-      
+      const targetList = contextList && contextList.length > 0 ? contextList : songs;
+      const targetContextId = contextId || 'all';
+
       setCurrentContextId(targetContextId);
       originalQueueRef.current = [...targetList];
-      
+
       let tracks = [...targetList];
       if (isShuffleRef.current || forceShuffle) {
         const otherTracks = tracks.filter(s => s.id !== song.id);
@@ -476,29 +556,29 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         }
         tracks = [song, ...otherTracks];
       }
-      
+
       queueRef.current = tracks;
       setQueue(tracks);
       currentQueueIndex.current = tracks.findIndex(s => s.id === song.id);
-      
+
       setQueueLength(tracks.length);
       setQueuePosition(currentQueueIndex.current + 1);
     } else {
       currentQueueIndex.current = queueRef.current.findIndex(s => s.id === song.id);
       setQueuePosition(currentQueueIndex.current + 1);
     }
-    
+
     if (audioRef.current) {
       audioRef.current.src = song.uri;
       audioRef.current.play();
     }
-    
+
     setCurrentSong(song);
     loadMetadataForSong(song);
   };
 
   const playWithShuffle = async (contextId?: string, contextList?: Song[]) => {
-    let targetList = contextList && contextList.length > 0 ? contextList : songs;
+    const targetList = contextList !== undefined ? contextList : songs;
     if (targetList.length === 0) return;
     const randomSong = targetList[Math.floor(Math.random() * targetList.length)];
     await playSound(randomSong, contextId, targetList, true);
@@ -506,27 +586,27 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   const pauseOrResumeSound = async () => {
     if (!audioRef.current) return;
-    
+
     if (isCrossfadingRef.current && crossfadeTimerRef.current) {
-       // Si el usuario pausa durante el crossfade, pausamos ambos
-       if (isPlaying) {
-         audioRef.current.pause();
-         secondaryAudioRef.current?.pause();
-         setIsPlaying(false);
-         // Para simplificar, cancelamos el crossfade y avanzamos directo
-         clearInterval(crossfadeTimerRef.current);
-         crossfadeTimerRef.current = null;
-         isCrossfadingRef.current = false;
-         audioRef.current.volume = 1;
-         
-         const secondary = secondaryAudioRef.current!;
-         secondary.volume = 1;
-         audioRef.current = secondary;
-         secondaryAudioRef.current = audioRef.current; // old primary
-         attachListeners(audioRef.current);
-         clearListeners(secondaryAudioRef.current);
-       }
-       return;
+      // Si el usuario pausa durante el crossfade, pausamos ambos
+      if (isPlaying) {
+        audioRef.current.pause();
+        secondaryAudioRef.current?.pause();
+        setIsPlaying(false);
+        // Para simplificar, cancelamos el crossfade y avanzamos directo
+        clearInterval(crossfadeTimerRef.current);
+        crossfadeTimerRef.current = null;
+        isCrossfadingRef.current = false;
+        audioRef.current.volume = 1;
+
+        const secondary = secondaryAudioRef.current!;
+        secondary.volume = 1;
+        audioRef.current = secondary;
+        secondaryAudioRef.current = audioRef.current; // old primary
+        attachListeners(audioRef.current);
+        clearListeners(secondaryAudioRef.current);
+      }
+      return;
     }
 
     if (isPlaying) {
@@ -580,9 +660,9 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const toggleShuffle = async () => {
     const newState = !isShuffle;
     setIsShuffle(newState);
-    
+
     if (!currentSong) return;
-    
+
     if (newState) {
       const otherTracks = originalQueueRef.current.filter(s => s.id !== currentSong.id);
       for (let i = otherTracks.length - 1; i > 0; i--) {
@@ -607,10 +687,10 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     const result = Array.from(queueRef.current);
     const [removed] = result.splice(startIndex, 1);
     result.splice(endIndex, 0, removed);
-    
+
     queueRef.current = result;
     setQueue(result);
-    
+
     if (currentSong) {
       currentQueueIndex.current = result.findIndex(s => s.id === currentSong.id);
       setQueuePosition(currentQueueIndex.current + 1);
@@ -629,7 +709,7 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       toggleFavorite, isFavorite, repeatMode, toggleRepeatMode, isShuffle,
       toggleShuffle, changeMusicFolder, isPlayerOpen, setIsPlayerOpen,
       showLyrics, setShowLyrics, isCrossfadeEnabled, setIsCrossfadeEnabled,
-      crossfadeDuration, setCrossfadeDuration
+      crossfadeDuration, setCrossfadeDuration, toastMessage, showToast
     }}>
       {children}
     </AudioContext.Provider>

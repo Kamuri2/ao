@@ -170,6 +170,29 @@ export function setupIpc() {
     }
   });
 
+  ipcMain.handle('dialog:openImageFile', async () => {
+    const { canceled, filePaths } = await dialog.showOpenDialog({
+      properties: ['openFile'],
+      filters: [{ name: 'Images', extensions: ['jpg', 'jpeg', 'png', 'webp'] }]
+    });
+    if (canceled || filePaths.length === 0) {
+      return null;
+    } else {
+      const sourcePath = filePaths[0];
+      const coversDir = path.join(app.getPath('userData'), 'playlist_covers');
+      if (!existsSync(coversDir)) {
+        await fs.mkdir(coversDir, { recursive: true });
+      }
+      const ext = path.extname(sourcePath);
+      const filename = `${crypto.randomUUID()}${ext}`;
+      const destPath = path.join(coversDir, filename);
+      
+      await fs.copyFile(sourcePath, destPath);
+      
+      return `file:///${destPath.replace(/\\/g, '/')}`;
+    }
+  });
+
   ipcMain.handle('fs:readMusicFiles', async (_, folderPath: string) => {
     if (!folderPath) return [];
     try {
@@ -649,11 +672,11 @@ async function getAudioFilesRecursive(dir: string): Promise<any[]> {
   return results;
 }
 
-function generateId(path: string) {
-  let hash = 0;
-  for (let i = 0; i < path.length; i++) {
-    hash = (hash << 5) - hash + path.charCodeAt(i);
+function generateId(filePath: string): string {
+  let hash = 5381;
+  for (let i = 0; i < filePath.length; i++) {
+    hash = ((hash << 5) + hash) + filePath.charCodeAt(i);
     hash |= 0;
   }
-  return Math.abs(hash).toString(16) + Date.now().toString(16);
+  return Math.abs(hash).toString(36);
 }

@@ -6,6 +6,7 @@ import { ipcRenderer } from 'electron'
 // Custom APIs for renderer
 const api = {
   openDirectory: () => ipcRenderer.invoke('dialog:openDirectory'),
+  openImageFile: () => ipcRenderer.invoke('dialog:openImageFile'),
   readMusicFiles: (folderPath: string) => ipcRenderer.invoke('fs:readMusicFiles', folderPath),
   getMetadata: (filePath: string) => ipcRenderer.invoke('fs:getMetadata', filePath),
   getCover: (filePath: string) => ipcRenderer.invoke('fs:getCover', filePath),

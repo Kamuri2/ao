@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { HashRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
-import { AnimatePresence } from 'framer-motion';
+import { AnimatePresence, motion } from 'framer-motion';
 import { AudioProvider, useAudio } from './context/AudioContext';
 import { ThemeProvider } from './context/ThemeContext';
 import HomeScreen from './screens/HomeScreen';
@@ -12,11 +12,12 @@ import SettingsScreen from './screens/SettingsScreen';
 import AlbumsScreen from './screens/AlbumsScreen';
 import ArtistsScreen from './screens/ArtistsScreen';
 import FoldersScreen from './screens/FoldersScreen';
+import PlaylistsScreen from './screens/PlaylistsScreen';
 import ListDetailScreen from './screens/ListDetailScreen';
 import ErrorBoundary from './components/ErrorBoundary';
 
 function AppContent() {
-  const { isPlayerOpen, currentSong } = useAudio();
+  const { isPlayerOpen, currentSong, toastMessage } = useAudio();
   const [renderPlayer, setRenderPlayer] = useState(isPlayerOpen);
 
   useEffect(() => {
@@ -42,6 +43,7 @@ function AppContent() {
             <Route path="/albums" element={<AlbumsScreen />} />
             <Route path="/artists" element={<ArtistsScreen />} />
             <Route path="/folders" element={<FoldersScreen />} />
+            <Route path="/playlists" element={<PlaylistsScreen />} />
             <Route path="/detail/:type/:id" element={<ListDetailScreen />} />
           </Routes>
         </AnimatePresence>
@@ -54,6 +56,20 @@ function AppContent() {
           <PlayerScreen />
         </div>
       )}
+      <AnimatePresence>
+        {toastMessage && (
+          <motion.div
+            initial={{ opacity: 0, y: 50, scale: 0.9 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.9, transition: { duration: 0.2 } }}
+            className={`fixed bottom-24 left-1/2 -translate-x-1/2 z-[100] px-6 py-3 rounded-full shadow-2xl backdrop-blur-md border ${
+              toastMessage.type === 'error' ? 'bg-red-500/20 border-red-500/50 text-red-100' : 'bg-emerald-500/20 border-emerald-500/50 text-emerald-100'
+            }`}
+          >
+            <span className="font-bold">{toastMessage.msg}</span>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

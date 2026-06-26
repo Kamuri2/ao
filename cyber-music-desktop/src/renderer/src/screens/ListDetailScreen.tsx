@@ -2,13 +2,13 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAudio } from '../context/AudioContext';
 import { useTheme } from '../context/ThemeContext';
-import { ArrowLeft, Play, Shuffle, Activity, Clock, ExternalLink, Music } from 'lucide-react';
+import { ArrowLeft, Play, Shuffle, Activity, Clock, ExternalLink, Music, Trash2, Camera } from 'lucide-react';
 import CoverImage from '../components/CoverImage';
 import { useDominantColor } from '../hooks/useDominantColor';
 import { Virtuoso } from 'react-virtuoso';
 import { motion } from 'framer-motion';
 
-const SongListItem = React.memo(({ item, isPlaying, onPress, index, hideCover }: any) => {
+const SongListItem = React.memo(({ item, isPlaying, onPress, index, hideCover, onRemove }: any) => {
   const { colors } = useTheme();
 
   return (
@@ -45,6 +45,14 @@ const SongListItem = React.memo(({ item, isPlaying, onPress, index, hideCover }:
           {Math.floor(item.duration / 60)}:{(item.duration % 60).toString().padStart(2, '0')}
         </div>
       )}
+      {onRemove && (
+        <button 
+          onClick={(e) => { e.stopPropagation(); onRemove(); }}
+          className="p-2 opacity-0 group-hover:opacity-100 hover:text-red-400 transition-all text-white/50"
+        >
+          <Trash2 size={18} />
+        </button>
+      )}
     </div>
   );
 });
@@ -52,7 +60,7 @@ const SongListItem = React.memo(({ item, isPlaying, onPress, index, hideCover }:
 export default function ListDetailScreen() {
   const { type, id } = useParams();
   const navigate = useNavigate();
-  const { albums, folders, artists, playSound, playWithShuffle, currentSong } = useAudio();
+  const { albums, folders, artists, playlists, songs, playSound, playWithShuffle, currentSong, removeSongFromPlaylist, updatePlaylistCover } = useAudio();
   const { colors } = useTheme();
 
   let dataList: any = null;
@@ -135,6 +143,16 @@ export default function ListDetailScreen() {
       subtitle = `${dataList.length} pistas`;
       cover = artistData.cover;
       audioPath = undefined;
+    }
+  } else if (type === 'playlist' && id) {
+    const playlist = playlists.find(p => p.id === id);
+    if (playlist) {
+      // Mapear los IDs a canciones reales
+      dataList = playlist.songIds.map(sId => songs.find(s => s.id === sId)).filter(Boolean);
+      title = playlist.name;
+      subtitle = playlist.description || 'Lista de Reproducción';
+      cover = playlist.cover || null;
+      audioPath = dataList[0]?.path;
     }
   }
 
@@ -221,7 +239,7 @@ export default function ListDetailScreen() {
         
         {/* Cover */}
         <div 
-          className="w-64 h-64 md:w-[320px] md:h-[320px] shadow-[0_4px_60px_rgba(0,0,0,0.5)] overflow-hidden flex-shrink-0 z-10 mt-8 md:mt-0 rounded-2xl"
+          className="relative w-64 h-64 md:w-[320px] md:h-[320px] shadow-[0_4px_60px_rgba(0,0,0,0.5)] overflow-hidden flex-shrink-0 z-10 mt-8 md:mt-0 rounded-2xl group"
         >
           <CoverImage 
             coverUrl={cover} 
@@ -231,11 +249,33 @@ export default function ListDetailScreen() {
             placeholderClassName="w-full h-full bg-black/10 dark:bg-white/10" 
             iconSize={80}
           />
+          {type === 'playlist' && id !== 'favorites' && (
+            <button
+              onClick={async () => {
+                try {
+                  const url = await window.api.openImageFile();
+                  if (url && id) {
+                    updatePlaylistCover(id, url);
+                  }
+                } catch (e) {
+                  console.error(e);
+                }
+              }}
+              className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white backdrop-blur-sm"
+            >
+              <div className="flex flex-col items-center gap-2">
+                <Camera size={32} />
+                <span className="font-bold text-sm">Cambiar Portada</span>
+              </div>
+            </button>
+          )}
         </div>
 
         {/* Text Details */}
         <div className="mt-6 md:mt-0 md:ml-8 flex flex-col z-10 flex-1 justify-end h-full w-full">
-          <span className="text-sm font-bold uppercase tracking-widest mb-2" style={{ color: colors.text }}>{type === 'album' ? 'Álbum' : type === 'folder' ? 'Carpeta' : 'Artista'}</span>
+          <span className="text-sm font-bold uppercase tracking-widest mb-2" style={{ color: colors.text }}>
+            {type === 'album' ? 'Álbum' : type === 'folder' ? 'Carpeta' : type === 'playlist' ? 'Lista' : 'Artista'}
+          </span>
           <h1 className="text-5xl md:text-8xl font-black text-wrap mb-6 tracking-tighter" style={{ color: colors.text, textShadow: '0 4px 12px rgba(0,0,0,0.1)' }}>{title}</h1>
           <div className="flex flex-row items-center flex-wrap gap-2 text-sm md:text-base font-bold opacity-90" style={{ color: colors.text }}>
             {type === 'album' && subtitle !== 'Carpeta' ? (
@@ -380,13 +420,15 @@ export default function ListDetailScreen() {
             components={{
               Footer: () => <div style={{ height: '120px' }} />
             }}
-            itemContent={(index, song) => (
-              <SongListItem 
-                item={song} 
-                index={index} 
-                isPlaying={currentSong?.id === song.id}
-                onPress={() => playSound(song, `${type}:${id}`, displayList)}
+            itemContent={(index, item) => (
+              <SongListItem
+                key={item.id}
+                item={item}
+                index={index}
+                isPlaying={currentSong?.id === item.id}
+                onPress={() => playSound(item, `${type}-${id}`, displayList, false)}
                 hideCover={type === 'album'}
+                onRemove={type === 'playlist' ? () => removeSongFromPlaylist(id as string, item.id) : undefined}
               />
             )}
           />

@@ -27,8 +27,10 @@ export interface Metadata {
 export interface Playlist {
   id: string;
   name: string;
+  description?: string;
   cover?: string | null;
   songIds: string[];
+  isAuto?: boolean;
 }
 
 export interface Album {
@@ -59,7 +61,7 @@ export interface AudioContextType {
   folders: Record<string, Folder>;
   artists: Record<string, Artist>;
   playlists: Playlist[];
-  createPlaylist: (name: string) => Promise<void>;
+  createPlaylist: (name: string, description?: string, cover?: string) => Promise<void>;
   deletePlaylist: (id: string) => Promise<void>;
   addSongToPlaylist: (playlistId: string, songId: string) => Promise<void>;
   removeSongFromPlaylist: (playlistId: string, songId: string) => Promise<void>;
@@ -101,4 +103,6 @@ export interface AudioContextType {
   setIsCrossfadeEnabled: (enabled: boolean) => void;
   crossfadeDuration: number;
   setCrossfadeDuration: (duration: number) => void;
+  toastMessage: { msg: string, type: 'success' | 'error' } | null;
+  showToast: (msg: string, type?: 'success' | 'error') => void;
 }

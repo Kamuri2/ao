@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { motion } from 'framer-motion';
 import { useAudio } from '../context/AudioContext';
 
 interface LyricLine {
@@ -30,7 +31,7 @@ export default function LyricsView() {
       const parsed = (lrcRaw as any).syncText.map((item: any) => ({
           time: item.timestamp / 1000, 
           text: item.text || ''
-      })).filter((item: any) => item.text.trim() !== '');
+      }));
       setLyrics(parsed);
       setStaticLyrics(null);
       return;
@@ -60,9 +61,8 @@ export default function LyricsView() {
         
         const time = minutes * 60 + seconds + milliseconds / 1000;
         
-        if (text) {
-          parsed.push({ time, text });
-        }
+        // Remove the `if (text)` check so we preserve empty lines (paragraph gaps)
+        parsed.push({ time, text });
       }
     });
 
@@ -90,13 +90,18 @@ export default function LyricsView() {
     }
   }
 
+  const [yOffset, setYOffset] = useState(0);
+
   // Auto-scroll
   useEffect(() => {
     if (isSynced && activeLineRef.current && containerRef.current) {
       const container = containerRef.current;
       const activeEl = activeLineRef.current;
+      // Calculate offset relative to the moving container so we can translate it
       const scrollPos = activeEl.offsetTop - container.offsetHeight / 2 + activeEl.offsetHeight / 2;
-      container.scrollTo({ top: scrollPos, behavior: 'smooth' });
+      setYOffset(-scrollPos);
+    } else if (activeIndex === -1) {
+      setYOffset(0);
     }
   }, [activeIndex, isSynced]);
 
@@ -121,14 +126,19 @@ export default function LyricsView() {
   return (
     <div 
       ref={containerRef}
-      className="flex-1 w-full max-w-2xl mx-auto overflow-y-auto mb-8 px-4 scrollbar-hide"
+      className="flex-1 w-full max-w-2xl mx-auto overflow-hidden mb-8 px-4"
       style={{ 
         maxHeight: '70vh', 
         maskImage: isSynced ? 'linear-gradient(to bottom, transparent 0%, black 15%, black 85%, transparent 100%)' : 'none', 
         WebkitMaskImage: isSynced ? 'linear-gradient(to bottom, transparent 0%, black 15%, black 85%, transparent 100%)' : 'none' 
       }}
     >
-      <div className="py-[30vh]">
+      <motion.div 
+        className="w-full relative"
+        animate={{ y: yOffset }}
+        transition={{ type: "tween", duration: 0.7, ease: [0.25, 0.1, 0.25, 1] }}
+      >
+        <div className="py-[30vh]">
         {lyrics.map((line, i) => {
           const isActive = i === activeIndex;
           const isPassed = i < activeIndex;
@@ -137,7 +147,7 @@ export default function LyricsView() {
             <div 
               key={i}
               ref={isActive ? activeLineRef : null}
-              className={`text-center transition-all duration-500 font-bold ${
+              className={`text-center transition-all duration-700 font-bold ${
                 isActive 
                   ? 'text-white text-3xl md:text-4xl scale-105 py-4 drop-shadow-lg' 
                   : isPassed 
@@ -148,11 +158,12 @@ export default function LyricsView() {
                  transformOrigin: 'center center'
               }}
             >
-              {line.text}
+              {line.text || '\u00A0'}
             </div>
           );
         })}
-      </div>
+        </div>
+      </motion.div>
     </div>
   );
 }

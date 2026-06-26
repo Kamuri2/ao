@@ -1,18 +1,22 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowLeft, Play, Pause, SkipBack, SkipForward, Repeat, Shuffle, ListMusic, Mic2 } from 'lucide-react';
+import { ArrowLeft, Play, Pause, SkipBack, SkipForward, Repeat, Shuffle, ListMusic, Mic2, Heart, Plus, ThumbsDown } from 'lucide-react';
 import { useAudio } from '../context/AudioContext';
 import { useTheme } from '../context/ThemeContext';
 import CoverImage from '../components/CoverImage';
 import QueuePanel from '../components/QueuePanel';
 import LyricsView from '../components/LyricsView';
+import AddToPlaylistModal from '../components/AddToPlaylistModal';
+import PlaylistCreateModal from '../components/PlaylistCreateModal';
 
 export default function PlayerScreen() {
   const { colors } = useTheme();
   const navigate = useNavigate();
   const [isQueueOpen, setIsQueueOpen] = useState(false);
   const [isIdle, setIsIdle] = useState(false);
+  const [isAddToPlaylistOpen, setIsAddToPlaylistOpen] = useState(false);
+  const [isCreatePlaylistOpen, setIsCreatePlaylistOpen] = useState(false);
   const {
     currentSong,
     metadata,
@@ -34,7 +38,9 @@ export default function PlayerScreen() {
     setShowLyrics,
     queue,
     queuePosition,
-    playSound
+    playSound,
+    toggleFavorite,
+    isFavorite
   } = useAudio();
 
   // Efecto de inactividad: la portada central crece después de 2 segundos si está reproduciendo
@@ -120,7 +126,7 @@ export default function PlayerScreen() {
 
         {/* Cover Art Area (Cover Flow) */}
         <div
-          className={`flex flex-col items-center justify-center transition-all duration-500 ease-in-out h-full overflow-hidden ${showLyrics && isQueueOpen ? 'w-0 opacity-0 scale-90 hidden' : showLyrics || isQueueOpen ? 'w-1/2 opacity-100 scale-100 flex-shrink-0' : 'w-full opacity-100 scale-100'
+          className={`flex flex-col items-center justify-center transition-all duration-500 ease-in-out h-full overflow-visible ${showLyrics && isQueueOpen ? 'w-0 opacity-0 scale-90 hidden' : showLyrics || isQueueOpen ? 'w-1/2 opacity-100 scale-100 flex-shrink-0' : 'w-full opacity-100 scale-100'
             }`}
           style={{ perspective: 1200 }}
         >
@@ -158,7 +164,7 @@ export default function PlayerScreen() {
                     <motion.div
                       key={song.id}
                       // Forzamos el tamaño máximo basado en la altura disponible para evitar recortes verticales
-                      className={`absolute h-[65%] md:h-[80%] max-h-[600px] aspect-square rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.5)] cursor-pointer ${isCenter ? '' : 'pointer-events-auto'}`}
+                      className={`absolute h-[75%] md:h-[90%] max-h-[800px] aspect-square rounded-2xl cursor-pointer ${isCenter ? '' : 'pointer-events-auto'}`}
                       initial={{ opacity: 0, x: `${translateX + (offset > 0 ? 20 : -20)}%`, scale: isCenter ? 1 : scale * 0.9, rotateY: rotateY * 1.5 }}
                       animate={{
                         opacity,
@@ -171,8 +177,7 @@ export default function PlayerScreen() {
                       transition={{ type: "tween", ease: "easeInOut", duration: 0.35 }}
                       style={{
                         zIndex,
-                        transformStyle: 'preserve-3d',
-                        boxShadow: isCenter ? '0 30px 60px rgba(0,0,0,0.6)' : '0 10px 30px rgba(0,0,0,0.4)'
+                        transformStyle: 'preserve-3d'
                       }}
                       onClick={() => {
                         if (!isCenter) playSound(song, currentContextId, undefined, undefined, false);
@@ -247,6 +252,31 @@ export default function PlayerScreen() {
             </AnimatePresence>
           </div>
           <div className="flex flex-row gap-2">
+            <button
+              onClick={() => {
+                if (currentSong) {
+                  toggleFavorite(currentSong.id);
+                }
+              }}
+              className="p-3 rounded-full transition-colors hover:bg-white/10"
+              title="Me gusta"
+            >
+              <Heart size={24} fill={currentSong && isFavorite(currentSong.id) ? colors.primary : 'none'} color={currentSong && isFavorite(currentSong.id) ? colors.primary : 'rgba(255,255,255,0.7)'} />
+            </button>
+            <button
+              onClick={() => playNext()}
+              className="p-3 rounded-full transition-colors hover:bg-white/10 text-white/70 hover:text-white"
+              title="No me gusta (Saltar)"
+            >
+              <ThumbsDown size={24} />
+            </button>
+            <button
+              onClick={() => setIsAddToPlaylistOpen(true)}
+              className="p-3 rounded-full transition-colors hover:bg-white/10 text-white/70 hover:text-white"
+              title="Añadir a playlist"
+            >
+              <Plus size={24} />
+            </button>
             <button
               onClick={() => setShowLyrics(!showLyrics)}
               className={`p-3 rounded-full transition-colors ${showLyrics ? 'bg-white/20 text-white' : 'hover:bg-white/10 text-white/70 hover:text-white'}`}
@@ -357,6 +387,21 @@ export default function PlayerScreen() {
           </div>
         )}
       </div>
+
+      <AddToPlaylistModal 
+        isOpen={isAddToPlaylistOpen} 
+        onClose={() => setIsAddToPlaylistOpen(false)} 
+        songId={currentSong?.id || null}
+        onOpenCreateNew={() => {
+          setIsAddToPlaylistOpen(false);
+          setIsCreatePlaylistOpen(true);
+        }}
+      />
+
+      <PlaylistCreateModal 
+        isOpen={isCreatePlaylistOpen}
+        onClose={() => setIsCreatePlaylistOpen(false)}
+      />
     </div>
   );
 }

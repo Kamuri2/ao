@@ -48,13 +48,8 @@ export default function HomeScreen() {
   const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
-    // If no songs and no folder saved, the context handles it or prompts.
-    // In desktop we can just show empty state.
-    if (songs.length === 0 && !localStorage.getItem('@music_folder')) {
-      // Nothing
-    } else if (songs.length === 0) {
-       loadSongsFromUri();
-    }
+    // AudioContext is responsible for loading the initial folder on startup.
+    // We shouldn't force open the directory picker here.
   }, []);
 
   const handlePlaySound = React.useCallback((item: any) => {
