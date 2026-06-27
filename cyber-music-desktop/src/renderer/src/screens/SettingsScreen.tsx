@@ -17,7 +17,7 @@ export default function SettingsScreen() {
   return (
     <div className="flex-1 min-h-screen px-6 py-8 max-w-4xl mx-auto w-full">
       <div className="flex flex-row items-center mb-8">
-        <button 
+        <button
           onClick={() => navigate(-1)}
           className="p-2 rounded-full hover:bg-black/10 transition-colors mr-4"
         >
@@ -33,7 +33,7 @@ export default function SettingsScreen() {
           <h2 className="text-xl font-bold mb-4" style={{ color: colors.text }}>Apariencia y Temas</h2>
           <div className="flex flex-row items-center justify-between mb-6">
             <span className="font-medium" style={{ color: colors.subText }}>Modo Oscuro</span>
-            <button 
+            <button
               className="px-4 py-2 rounded-lg font-bold transition-transform active:scale-95"
               style={{ backgroundColor: colors.primary, color: '#000' }}
               onClick={toggleTheme}
@@ -49,7 +49,7 @@ export default function SettingsScreen() {
                 key={theme.id}
                 onClick={() => setThemeFamily(theme.id)}
                 className={`p-3 rounded-xl border text-sm font-bold transition-all flex items-center justify-center ${themeFamily === theme.id ? 'scale-105 shadow-md' : 'opacity-70 hover:opacity-100'}`}
-                style={{ 
+                style={{
                   backgroundColor: themeFamily === theme.id ? colors.primary : 'transparent',
                   borderColor: themeFamily === theme.id ? colors.primary : colors.border,
                   color: themeFamily === theme.id ? '#000' : colors.text
@@ -67,7 +67,7 @@ export default function SettingsScreen() {
                 key={pType}
                 onClick={() => setParticles(pType)}
                 className={`px-4 py-2 rounded-lg border text-sm font-bold transition-all capitalize ${particles === pType ? 'scale-105 shadow-md' : 'opacity-70 hover:opacity-100'}`}
-                style={{ 
+                style={{
                   backgroundColor: particles === pType ? colors.primary : 'transparent',
                   borderColor: particles === pType ? colors.primary : colors.border,
                   color: particles === pType ? '#000' : colors.text
@@ -81,7 +81,7 @@ export default function SettingsScreen() {
 
         <div className="p-6 rounded-2xl border border-white/10 shadow-sm" style={{ backgroundColor: isDarkMode ? '#1e1e1e' : '#ffffff' }}>
           <h2 className="text-xl font-bold mb-4" style={{ color: colors.text }}>Librería de Música</h2>
-          
+
           {currentFolder ? (
             <div className="mb-4 p-3 rounded-lg bg-black/5 dark:bg-white/5 break-all">
               <span className="text-sm font-bold opacity-70 block mb-1">Carpeta actual:</span>
@@ -95,7 +95,7 @@ export default function SettingsScreen() {
 
           <div className="flex flex-col gap-4 mt-4">
             <div className="flex flex-row gap-4">
-              <button 
+              <button
                 className="flex-1 flex flex-row items-center justify-center gap-2 px-4 py-3 rounded-lg font-bold transition-transform active:scale-95 disabled:opacity-50 disabled:scale-100"
                 style={{ backgroundColor: colors.primary, color: '#000' }}
                 onClick={() => loadSongsFromUri()}
@@ -106,7 +106,7 @@ export default function SettingsScreen() {
               </button>
 
               {currentFolder && (
-                <button 
+                <button
                   className="flex-1 flex flex-row items-center justify-center gap-2 px-4 py-3 rounded-lg font-bold transition-transform active:scale-95 disabled:opacity-50 disabled:scale-100"
                   style={{ backgroundColor: colors.primary, color: '#000' }}
                   onClick={() => loadSongsFromUri(currentFolder, false)}
@@ -119,13 +119,13 @@ export default function SettingsScreen() {
             </div>
 
             {currentFolder && (
-              <button 
+              <button
                 className="flex flex-row items-center justify-center gap-2 px-4 py-3 rounded-lg font-bold transition-transform active:scale-95 bg-red-500/10 text-red-500 hover:bg-red-500/20 disabled:opacity-50 disabled:scale-100 w-full md:w-auto"
                 onClick={handleClearFolder}
                 disabled={isScanning}
               >
                 <Trash2 size={20} />
-                Limpiar Memoria
+                Eliminar Carpeta
               </button>
             )}
           </div>
@@ -133,14 +133,14 @@ export default function SettingsScreen() {
 
         <div className="p-6 rounded-2xl border border-white/10 shadow-sm" style={{ backgroundColor: isDarkMode ? '#1e1e1e' : '#ffffff' }}>
           <h2 className="text-xl font-bold mb-4" style={{ color: colors.text }}>Reproducción</h2>
-          
+
           <div className="flex flex-row items-center justify-between">
             <div>
-              <span className="font-medium block" style={{ color: colors.text }}>Crossfade (Transición Suave)</span>
+              <span className="font-medium block" style={{ color: colors.text }}>Crossfade</span>
               <span className="text-sm opacity-70" style={{ color: colors.subText }}>Desvanece la pista actual y comienza la siguiente sin cortes.</span>
             </div>
-            
-            <button 
+
+            <button
               className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ${isCrossfadeEnabled ? 'bg-green-500' : 'bg-gray-400'}`}
               style={{ backgroundColor: isCrossfadeEnabled ? colors.primary : undefined }}
               onClick={() => setIsCrossfadeEnabled(!isCrossfadeEnabled)}
@@ -155,10 +155,10 @@ export default function SettingsScreen() {
                 <span className="font-medium" style={{ color: colors.text }}>Duración del Crossfade</span>
                 <span className="font-bold" style={{ color: colors.primary }}>{crossfadeDuration} s</span>
               </div>
-              <input 
-                type="range" 
-                min="0.1" 
-                max="10" 
+              <input
+                type="range"
+                min="0.1"
+                max="10"
                 step="0.1"
                 value={crossfadeDuration}
                 onChange={(e) => setCrossfadeDuration(Number(e.target.value))}
@@ -176,8 +176,8 @@ export default function SettingsScreen() {
         <div className="p-6 rounded-2xl border border-white/10 shadow-sm" style={{ backgroundColor: isDarkMode ? '#1e1e1e' : '#ffffff' }}>
           <h2 className="text-xl font-bold mb-4" style={{ color: colors.text }}>Acerca de</h2>
           <p className="text-sm" style={{ color: colors.subText }}>
-            CyberMusic Desktop v1.0.0<br/>
-            Canciones en memoria: {songs.length}
+            CybeCat Desktop v1.0.0<br />
+            Canciones Leídas: {songs.length}
           </p>
         </div>
       </div>

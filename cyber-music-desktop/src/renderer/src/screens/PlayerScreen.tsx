@@ -156,8 +156,8 @@ export default function PlayerScreen() {
                   
                   // Escala visual y desplazamiento (aquí ajustas la separación)
                   const scale = isCenter ? (isIdle ? 1.15 : 1) : 1 - (absOffset * 0.15);
-                  const translateX = offset * 55; // Mayor separación horizontal para evitar solapamiento extremo
-                  const rotateY = offset === 0 ? 0 : offset < 0 ? 60 : -60; // Ángulo de inclinación 3D
+                  const translateX = offset * 40; // Menor separación para centrar más las portadas
+                  const rotateY = offset === 0 ? 0 : offset < 0 ? 55 : -55; // Ángulo de inclinación 3D suavizado
                   const opacity = isCenter ? 1 : 1 - (absOffset * 0.3);
 
                   return (

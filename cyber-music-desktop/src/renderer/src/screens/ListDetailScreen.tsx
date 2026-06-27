@@ -12,7 +12,7 @@ const SongListItem = React.memo(({ item, isPlaying, onPress, index, hideCover, o
   const { colors } = useTheme();
 
   return (
-    <div 
+    <div
       className="flex flex-row items-center p-3 rounded-xl mb-1 cursor-pointer hover:bg-black/5 dark:hover:bg-white/10 transition-colors group"
       onClick={onPress}
       style={{ animationDelay: `${index * 30}ms` }}
@@ -30,8 +30,8 @@ const SongListItem = React.memo(({ item, isPlaying, onPress, index, hideCover, o
         />
       )}
       <div className={`flex-1 flex flex-col justify-center overflow-hidden pr-4 ${hideCover ? 'ml-0' : 'ml-4'}`}>
-        <span 
-          className="text-base font-bold mb-0.5 truncate" 
+        <span
+          className="text-base font-bold mb-0.5 truncate"
           style={{ color: isPlaying ? colors.primary : colors.text }}
         >
           {item.title || item.filename.replace(/\.[^/.]+$/, "")}
@@ -46,7 +46,7 @@ const SongListItem = React.memo(({ item, isPlaying, onPress, index, hideCover, o
         </div>
       )}
       {onRemove && (
-        <button 
+        <button
           onClick={(e) => { e.stopPropagation(); onRemove(); }}
           className="p-2 opacity-0 group-hover:opacity-100 hover:text-red-400 transition-all text-white/50"
         >
@@ -81,19 +81,60 @@ export default function ListDetailScreen() {
         const realKey = Object.keys(artists).find(k => k.trim().toLowerCase() === lowerId);
         if (realKey) artistData = artists[realKey];
       }
-      
+
       if (artistData && artistData.name !== 'Desconocido') {
         const artistName = artistData.name;
-        fetch(`https://es.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(artistName)}`)
-          .then(res => res.json())
-          .then(data => {
-            if (data && data.extract && data.type !== 'https://mediawiki.org/wiki/HyperSwitch/errors/not_found') {
+        
+        const fetchBio = async () => {
+          try {
+            // Intento directo en español
+            let res = await fetch(`https://es.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(artistName)}`);
+            let data = await res.json();
+            
+            // Si es desambiguación o no existe, buscamos
+            if (data.type === 'disambiguation' || data.title === 'Not found' || data.type === 'https://mediawiki.org/wiki/HyperSwitch/errors/not_found') {
+              const searchRes = await fetch(`https://es.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(artistName + ' cantante')}&utf8=&format=json&origin=*`);
+              const searchData = await searchRes.json();
+              if (searchData.query && searchData.query.search.length > 0) {
+                const bestTitle = searchData.query.search[0].title;
+                res = await fetch(`https://es.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(bestTitle)}`);
+                data = await res.json();
+              }
+            }
+
+            if (data && data.extract && data.type !== 'disambiguation' && data.type !== 'https://mediawiki.org/wiki/HyperSwitch/errors/not_found') {
               setArtistBio(data.extract);
             } else {
-              setArtistBio(null); // Silently fail without warning
+              // Intento en inglés como respaldo
+              const enRes = await fetch(`https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(artistName)}`);
+              const enData = await enRes.json();
+              
+              if (enData.type === 'disambiguation' || enData.title === 'Not found' || enData.type === 'https://mediawiki.org/wiki/HyperSwitch/errors/not_found') {
+                const enSearchRes = await fetch(`https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(artistName + ' musician')}&utf8=&format=json&origin=*`);
+                const enSearchData = await enSearchRes.json();
+                if (enSearchData.query && enSearchData.query.search.length > 0) {
+                  const enBestTitle = enSearchData.query.search[0].title;
+                  const enRes2 = await fetch(`https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(enBestTitle)}`);
+                  const enData2 = await enRes2.json();
+                  if (enData2 && enData2.extract && enData2.type !== 'disambiguation') {
+                    setArtistBio(enData2.extract);
+                    return;
+                  }
+                }
+              }
+
+              if (enData && enData.extract && enData.type !== 'disambiguation' && enData.type !== 'https://mediawiki.org/wiki/HyperSwitch/errors/not_found') {
+                setArtistBio(enData.extract);
+              } else {
+                setArtistBio(null);
+              }
             }
-          })
-          .catch(() => setArtistBio(null));
+          } catch (e) {
+            setArtistBio(null);
+          }
+        };
+
+        fetchBio();
       } else {
         setTimeout(() => setArtistBio(null), 0);
       }
@@ -211,15 +252,15 @@ export default function ListDetailScreen() {
   };
 
   return (
-    <motion.div 
+    <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
       transition={{ type: "tween", duration: 0.3, ease: "easeOut" }}
-      className="flex-1 w-full pb-24 flex flex-col" 
+      className="flex-1 w-full pb-24 flex flex-col"
     >
       {/* Dynamic Background */}
-      <motion.div 
+      <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ delay: 0.1, duration: 0.5 }}
@@ -236,17 +277,17 @@ export default function ListDetailScreen() {
             <ArrowLeft size={24} />
           </button>
         </div>
-        
+
         {/* Cover */}
-        <div 
+        <div
           className="relative w-64 h-64 md:w-[320px] md:h-[320px] shadow-[0_4px_60px_rgba(0,0,0,0.5)] overflow-hidden flex-shrink-0 z-10 mt-8 md:mt-0 rounded-2xl group"
         >
-          <CoverImage 
-            coverUrl={cover} 
+          <CoverImage
+            coverUrl={cover}
             audioPath={audioPath}
             hq={true}
-            className="w-full h-full object-cover" 
-            placeholderClassName="w-full h-full bg-black/10 dark:bg-white/10" 
+            className="w-full h-full object-cover"
+            placeholderClassName="w-full h-full bg-black/10 dark:bg-white/10"
             iconSize={80}
           />
           {type === 'playlist' && id !== 'favorites' && (
@@ -274,13 +315,13 @@ export default function ListDetailScreen() {
         {/* Text Details */}
         <div className="mt-6 md:mt-0 md:ml-8 flex flex-col z-10 flex-1 justify-end h-full w-full">
           <span className="text-sm font-bold uppercase tracking-widest mb-2" style={{ color: colors.text }}>
-            {type === 'album' ? 'Álbum' : type === 'folder' ? 'Carpeta' : type === 'playlist' ? 'Lista' : 'Artista'}
+            {type === 'album' ? 'Álbum' : type === 'folder' ? 'Carpeta' : type === 'playlist' ? 'Playlist' : 'Artista'}
           </span>
           <h1 className="text-5xl md:text-8xl font-black text-wrap mb-6 tracking-tighter" style={{ color: colors.text, textShadow: '0 4px 12px rgba(0,0,0,0.1)' }}>{title}</h1>
           <div className="flex flex-row items-center flex-wrap gap-2 text-sm md:text-base font-bold opacity-90" style={{ color: colors.text }}>
             {type === 'album' && subtitle !== 'Carpeta' ? (
-              <span 
-                className="cursor-pointer hover:underline" 
+              <span
+                className="cursor-pointer hover:underline"
                 onClick={() => navigate(`/detail/artist/${encodeURIComponent(subtitle)}`)}
               >
                 {subtitle}
@@ -303,7 +344,7 @@ export default function ListDetailScreen() {
               </>
             )}
           </div>
-          
+
           {type === 'artist' && (
             <div className="mt-6 flex flex-col gap-4">
               {artistBio && (
@@ -314,21 +355,21 @@ export default function ListDetailScreen() {
                   </p>
                 </div>
               )}
-              
+
               <div className="flex flex-row gap-3">
-                <button 
+                <button
                   onClick={() => openLink(`https://open.spotify.com/search/${encodeURIComponent(title)}/artists`)}
                   className="flex items-center gap-2 px-4 py-2 rounded-full bg-[#1DB954]/20 hover:bg-[#1DB954]/30 text-[#1DB954] transition-colors text-sm font-bold"
                 >
                   <Music size={16} /> Spotify
                 </button>
-                <button 
+                <button
                   onClick={() => openLink(`https://www.youtube.com/results?search_query=${encodeURIComponent(title)}`)}
                   className="flex items-center gap-2 px-4 py-2 rounded-full bg-[#FF0000]/20 hover:bg-[#FF0000]/30 text-[#FF0000] transition-colors text-sm font-bold"
                 >
                   <ExternalLink size={16} /> YouTube
                 </button>
-                <button 
+                <button
                   onClick={() => openLink(`https://music.apple.com/us/search?term=${encodeURIComponent(title)}`)}
                   className="flex items-center gap-2 px-4 py-2 rounded-full bg-[#FA243C]/20 hover:bg-[#FA243C]/30 text-[#FA243C] transition-colors text-sm font-bold"
                 >
@@ -342,14 +383,14 @@ export default function ListDetailScreen() {
 
       {/* Action Buttons */}
       <div className="px-8 py-6 flex flex-row items-center gap-6 relative z-10">
-        <button 
+        <button
           className="w-16 h-16 rounded-full flex items-center justify-center transition-transform hover:scale-105 active:scale-95 shadow-[0_8px_16px_rgba(0,0,0,0.3)] hover:shadow-[0_12px_24px_rgba(0,0,0,0.4)]"
           style={{ backgroundColor: colors.primary, color: '#000' }}
           onClick={() => playSound(dataList[0], `${type}:${id}`, dataList, false)}
         >
           <Play size={32} fill="currentColor" className="ml-1" />
         </button>
-        <button 
+        <button
           className="p-3 rounded-full hover:bg-black/10 dark:hover:bg-white/10 transition-colors opacity-70 hover:opacity-100"
           style={{ color: colors.text }}
           title="Reproducción aleatoria"
@@ -363,7 +404,7 @@ export default function ListDetailScreen() {
       {type === 'artist' && artistAlbums.length > 0 && (
         <div className="px-8 mb-8">
           <h2 className="text-2xl font-bold mb-4" style={{ color: colors.text }}>Álbumes</h2>
-          <div 
+          <div
             className="flex overflow-x-auto gap-4 pb-4 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]"
             onWheel={(e) => {
               if (e.currentTarget) {
@@ -372,17 +413,17 @@ export default function ListDetailScreen() {
             }}
           >
             {artistAlbums.map((album: any) => (
-              <div 
+              <div
                 key={album.name}
                 className="flex flex-col flex-shrink-0 w-32 md:w-40 cursor-pointer group"
                 onClick={() => navigate(`/detail/album/${encodeURIComponent(album.name)}`)}
               >
                 <div className="w-32 h-32 md:w-40 md:h-40 rounded-xl shadow-lg overflow-hidden mb-3 relative bg-black/5 dark:bg-white/5">
-                  <CoverImage 
-                    coverUrl={album.cover} 
+                  <CoverImage
+                    coverUrl={album.cover}
                     audioPath={album.songs[0]?.path}
                     hq={true}
-                    className="w-full h-full object-cover" 
+                    className="w-full h-full object-cover"
                     placeholderClassName="w-full h-full"
                   />
                   <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">

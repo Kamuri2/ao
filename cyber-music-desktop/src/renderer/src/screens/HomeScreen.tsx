@@ -96,38 +96,6 @@ export default function HomeScreen() {
 
   return (
     <div className="flex-1 min-h-screen px-8 pb-24 max-w-full w-full pt-10 animate-fade-in">
-      {/* Floating Buttons */}
-      <div className="fixed top-6 right-6 flex flex-row z-50">
-        <button
-          className="w-11 h-11 rounded-lg border-2 border-b-4 border-r-4 flex justify-center items-center ml-4 transition-transform active:scale-95 bg-black/5 dark:bg-white/5 backdrop-blur-md"
-          style={{ borderColor: colors.border }}
-          onClick={() => {
-            const folder = localStorage.getItem('@music_folder');
-            if (folder) loadSongsFromUri(folder);
-            else loadSongsFromUri();
-          }}
-          title="Refrescar Música"
-        >
-          <RefreshCw size={20} color={colors.text} />
-        </button>
-        <button
-          className="w-11 h-11 rounded-lg border-2 border-b-4 border-r-4 flex justify-center items-center ml-4 transition-transform active:scale-95 bg-black/5 dark:bg-white/5 backdrop-blur-md"
-          style={{ borderColor: colors.border }}
-          onClick={toggleTheme}
-          title="Cambiar Tema"
-        >
-          {isDarkMode ? <Sun size={20} color={colors.text} /> : <Moon size={20} color={colors.text} />}
-        </button>
-        <button
-          className="w-11 h-11 rounded-lg border-2 border-b-4 border-r-4 flex justify-center items-center ml-4 transition-transform active:scale-95 bg-black/5 dark:bg-white/5 backdrop-blur-md"
-          style={{ borderColor: colors.border }}
-          onClick={() => navigate('/settings')}
-          title="Ajustes"
-        >
-          <Settings size={20} color={colors.text} />
-        </button>
-      </div>
-
       <h1 className="text-5xl font-black uppercase tracking-[5px] mt-8 mb-6" style={{ color: colors.text }}>
         Música
       </h1>

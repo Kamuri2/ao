@@ -6,6 +6,7 @@ import { ThemeProvider } from './context/ThemeContext';
 import HomeScreen from './screens/HomeScreen';
 import MiniPlayer from './components/MiniPlayer';
 import Sidebar from './components/Sidebar';
+import GlobalButtons from './components/GlobalButtons';
 
 import PlayerScreen from './screens/PlayerScreen';
 import SettingsScreen from './screens/SettingsScreen';
@@ -34,6 +35,7 @@ function AppContent() {
 
   return (
     <div className="flex flex-col md:flex-row h-screen overflow-hidden bg-transparent relative">
+      <GlobalButtons />
       <Sidebar />
       <div id="main-scroll-container" className={`flex-1 overflow-y-auto overflow-x-hidden relative ${currentSong && !isPlayerOpen ? 'pb-[90px]' : 'pb-20 md:pb-0'}`}>
         <AnimatePresence mode="wait">

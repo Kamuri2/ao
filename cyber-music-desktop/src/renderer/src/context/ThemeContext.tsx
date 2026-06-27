@@ -27,7 +27,7 @@ export const baseThemes = [
   { id: 'ocean', name: 'Ocean' },
   { id: 'sunset', name: 'Sunset' },
   { id: 'lavender', name: 'Lavender' },
-  { id: 'frutigerAero', name: 'Frutiger Aero (Glass)' },
+  { id: 'frutigerAero', name: 'Glass Blue' },
   { id: 'dracula', name: 'Dracula' },
   { id: 'nord', name: 'Nordic Ice' },
   { id: 'matcha', name: 'Matcha Tea' },
@@ -103,17 +103,17 @@ type ThemeContextType = {
 
 const ThemeContext = createContext<ThemeContextType>({
   themeFamily: 'mint',
-  setThemeFamily: () => {},
+  setThemeFamily: () => { },
   isDarkMode: true,
-  setIsDarkMode: () => {},
-  toggleTheme: () => {},
+  setIsDarkMode: () => { },
+  toggleTheme: () => { },
   colors: themes.mintDark.colors,
   particles: 'none',
-  setParticles: () => {},
+  setParticles: () => { },
   themeId: 'mintDark',
   backgroundImage: null,
-  setBackgroundImage: () => {},
-  pickBackgroundImage: async () => {},
+  setBackgroundImage: () => { },
+  pickBackgroundImage: async () => { },
 });
 
 export const useTheme = (): ThemeContextType => useContext(ThemeContext);
@@ -127,13 +127,13 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   useEffect(() => {
     const fam = localStorage.getItem('@theme_family');
     if (fam && baseThemes.find(t => t.id === fam)) setThemeFamilyState(fam);
-    
+
     const dark = localStorage.getItem('@is_dark_mode');
     if (dark !== null) setIsDarkModeState(dark === 'true');
-    
+
     const parts = localStorage.getItem('@particles') as ParticleType;
     if (parts) setParticlesState(parts);
-    
+
     const bg = localStorage.getItem('@background_image');
     if (bg) setBackgroundImageState(bg);
   }, []);
@@ -154,7 +154,7 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         const reader = new FileReader();
         reader.onload = (event) => {
           if (event.target?.result) {
-             setBackgroundImage(event.target.result as string);
+            setBackgroundImage(event.target.result as string);
           }
         };
         reader.readAsDataURL(file);
@@ -187,17 +187,17 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const isFrutiger = themeFamily === 'frutigerAero';
 
   return (
-    <ThemeContext.Provider value={{ 
-      themeFamily, setThemeFamily, isDarkMode, setIsDarkMode, toggleTheme, 
-      colors: currentTheme.colors, particles, setParticles, themeId, 
+    <ThemeContext.Provider value={{
+      themeFamily, setThemeFamily, isDarkMode, setIsDarkMode, toggleTheme,
+      colors: currentTheme.colors, particles, setParticles, themeId,
       backgroundImage, setBackgroundImage, pickBackgroundImage
     }}>
       <div style={{
-         flex: 1, 
-         minHeight: '100vh', 
-         backgroundColor: currentTheme.colors.background,
-         color: currentTheme.colors.text,
-         position: 'relative'
+        flex: 1,
+        minHeight: '100vh',
+        backgroundColor: currentTheme.colors.background,
+        color: currentTheme.colors.text,
+        position: 'relative'
       }}>
         {backgroundImage && (
           <div style={{
@@ -210,15 +210,15 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           }} />
         )}
         {isFrutiger && !backgroundImage && (
-           <div style={{
-             position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
-             background: isDarkMode 
-               ? 'linear-gradient(to bottom right, #001a1c, #004d40, #001a1c)'
-               : 'linear-gradient(to bottom right, #e0f7fa, #b2ebf2, #80cbc4, #e0f7fa)',
-             zIndex: 0
-           }} />
+          <div style={{
+            position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
+            background: isDarkMode
+              ? 'linear-gradient(to bottom right, #001a1c, #004d40, #001a1c)'
+              : 'linear-gradient(to bottom right, #e0f7fa, #b2ebf2, #80cbc4, #e0f7fa)',
+            zIndex: 0
+          }} />
         )}
-        
+
         {particles !== 'none' && (
           <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, zIndex: 0, pointerEvents: 'none', overflow: 'hidden' }}>
             <ParticlesBackground type={particles} />

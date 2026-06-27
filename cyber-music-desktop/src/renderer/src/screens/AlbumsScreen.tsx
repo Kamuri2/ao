@@ -52,7 +52,7 @@ export default function AlbumsScreen() {
 
   return (
     <div className="flex-1 px-8 py-8 max-w-full w-full animate-fade-in relative">
-      <h1 className="text-4xl font-black uppercase tracking-widest mb-8" style={{ color: colors.text }}>Álbumes</h1>
+      <h1 className="text-4xl font-black uppercase tracking-widest mb-8" style={{ color: colors.text }}>Álbums</h1>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 w-full pb-32 pr-12">
         {sortedAlbums.map((album: any) => {
@@ -61,13 +61,13 @@ export default function AlbumsScreen() {
           const isFirst = firstOfLetter.get(letter) === album.name;
 
           return (
-            <div 
-              key={album.name} 
+            <div
+              key={album.name}
               id={isFirst ? `letter-${letter}` : undefined}
               className="flex flex-col items-center p-4 rounded-xl hover:bg-black/5 dark:hover:bg-white/5 transition-all cursor-pointer group h-full"
               onClick={() => navigate(`/detail/album/${encodeURIComponent(album.name)}`)}
             >
-              <div 
+              <div
                 className="relative w-full aspect-square mb-3 rounded-xl overflow-hidden shadow-lg transition-all duration-300 group-hover:brightness-110"
               >
                 <CoverImage
@@ -92,10 +92,9 @@ export default function AlbumsScreen() {
               key={letter}
               onClick={() => exists && scrollToLetter(letter)}
               disabled={!exists}
-              className={`text-[10px] sm:text-xs font-bold w-5 h-5 sm:w-6 sm:h-6 rounded-full flex items-center justify-center transition-all ${
-                exists ? 'hover:scale-125 cursor-pointer' : 'opacity-20 cursor-default'
-              }`}
-              style={{ 
+              className={`text-[10px] sm:text-xs font-bold w-5 h-5 sm:w-6 sm:h-6 rounded-full flex items-center justify-center transition-all ${exists ? 'hover:scale-125 cursor-pointer' : 'opacity-20 cursor-default'
+                }`}
+              style={{
                 color: exists ? colors.text : colors.subText,
                 backgroundColor: exists ? 'transparent' : 'transparent'
               }}

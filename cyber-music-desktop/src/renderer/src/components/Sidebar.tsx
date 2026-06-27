@@ -1,7 +1,7 @@
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Home, FolderOpen, Disc3, Mic2, Settings, ListMusic } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
-import astroLogo from '../assets/Astro.png';
+import cybeCatLogo from '../assets/CybeCat.png';
 
 export default function Sidebar() {
   const navigate = useNavigate();
@@ -31,19 +31,15 @@ export default function Sidebar() {
       style={{ backgroundColor: colors.background }}>
 
       <div className="hidden md:block w-full mb-8 px-2">
-        <img src={astroLogo} alt="Astro Logo" className="h-10 w-auto object-contain" />
+        <img src={cybeCatLogo} alt="CybeCat Logo" className="h-14 w-auto object-contain" />
       </div>
 
       <div className="flex flex-row md:flex-col w-full justify-around md:justify-start md:gap-2">
         <NavItem to="/" icon={Home} label="Inicio" />
         <NavItem to="/folders" icon={FolderOpen} label="Carpetas" />
         <NavItem to="/playlists" icon={ListMusic} label="Playlist" />
-        <NavItem to="/albums" icon={Disc3} label="Álbumes" />
+        <NavItem to="/albums" icon={Disc3} label="Álbums" />
         <NavItem to="/artists" icon={Mic2} label="Artistas" />
-      </div>
-
-      <div className="hidden md:flex flex-1 items-end w-full">
-        <NavItem to="/settings" icon={Settings} label="Ajustes" />
       </div>
     </div>
   );

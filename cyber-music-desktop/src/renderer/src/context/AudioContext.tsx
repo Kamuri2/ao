@@ -452,6 +452,26 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
   };
 
+  const updatePlaylist = async (playlistId: string, updates: Pick<Playlist, 'name' | 'description' | 'cover'>) => {
+    const existing = playlists.find(p => p.id === playlistId);
+    if (!existing || existing.isAuto) return;
+
+    try {
+      savePlaylists(prev => prev.map(p => {
+        if (p.id !== playlistId) return p;
+        return {
+          ...p,
+          name: updates.name,
+          description: updates.description || undefined,
+          cover: updates.cover || null
+        };
+      }));
+      showToast(`Lista "${updates.name}" actualizada.`);
+    } catch {
+      showToast(`Error al actualizar la lista "${existing.name}".`, 'error');
+    }
+  };
+
   const deletePlaylist = async (id: string) => {
     if (id === 'favorites') return;
     savePlaylists(prev => prev.filter(p => p.id !== id));
@@ -700,7 +720,7 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   return (
     <AudioContext.Provider value={{
       isScanning, songs, setSongs, albums, folders, artists, playlists,
-      createPlaylist, deletePlaylist, addSongToPlaylist, removeSongFromPlaylist, updatePlaylistCover,
+      createPlaylist, updatePlaylist, deletePlaylist, addSongToPlaylist, removeSongFromPlaylist, updatePlaylistCover,
       currentSong, isPlaying, metadata: { cover: currentSong?.cover || null, lyrics, audioDetails },
       playSound, playWithShuffle, pauseOrResumeSound, playNext, playPrevious, seekTo,
       progress, duration,

@@ -1,7 +1,8 @@
-appId: com.electron.app
-productName: cyber-music-desktop
+appId: com.kevin.scat
+productName: SCat
 directories:
   buildResources: build
+  output: dist/SCat
 files:
   - '!**/.vscode/*'
   - '!src/*'
@@ -12,9 +13,10 @@ files:
 asarUnpack:
   - resources/**
 win:
-  executableName: cyber-music-desktop
+  executableName: SCat
+  icon: build/CybeCat.png
 nsis:
-  artifactName: ${name}-${version}-setup.${ext}
+  artifactName: SCat-${version}-setup.${ext}
   shortcutName: ${productName}
   uninstallDisplayName: ${productName}
   createDesktopShortcut: always

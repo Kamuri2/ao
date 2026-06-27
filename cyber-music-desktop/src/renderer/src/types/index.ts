@@ -62,6 +62,7 @@ export interface AudioContextType {
   artists: Record<string, Artist>;
   playlists: Playlist[];
   createPlaylist: (name: string, description?: string, cover?: string) => Promise<void>;
+  updatePlaylist: (playlistId: string, updates: Pick<Playlist, 'name' | 'description' | 'cover'>) => Promise<void>;
   deletePlaylist: (id: string) => Promise<void>;
   addSongToPlaylist: (playlistId: string, songId: string) => Promise<void>;
   removeSongFromPlaylist: (playlistId: string, songId: string) => Promise<void>;

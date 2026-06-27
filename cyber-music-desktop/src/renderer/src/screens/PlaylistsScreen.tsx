@@ -1,12 +1,17 @@
 import { useState } from 'react';
 import { useAudio } from '../context/AudioContext';
 import { useNavigate } from 'react-router-dom';
-import { Music2, Play, MoreVertical, Trash2 } from 'lucide-react'; // eslint-disable-line no-unused-vars
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+import { useTheme, ThemeColors } from '../context/ThemeContext';
+import { Music2, Play, MoreVertical, Trash2, Edit } from 'lucide-react';
 import PlaylistCreateModal from '../components/PlaylistCreateModal';
+import PlaylistEditModal from '../components/PlaylistEditModal';
 
-export default function PlaylistsScreen(): React.JSX.Element {
-  const { playlists, deletePlaylist, currentContextId } = useAudio();
-  const navigate = useNavigate();
+export default function PlaylistsScreen() {
+  const { playlists, deletePlaylist, currentContextId, updatePlaylistCover } = useAudio();
+
+  const { colors } = useTheme();
+  const navigate = useNavigate(); // eslint-disable-line @typescript-eslint/no-unused-vars
   const [hoveredId, setHoveredId] = useState<string | null>(null);
   const [contextMenuId, setContextMenuId] = useState<string | null>(null);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -19,18 +24,26 @@ export default function PlaylistsScreen(): React.JSX.Element {
     }
   };
 
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [editingPlaylist, setEditingPlaylist] = useState<any | null>(null);
+  const handleEditPlaylist = (playlist: any) => {
+    setEditingPlaylist(playlist);
+    setIsEditModalOpen(true);
+  };
+
   return (
     <div className="p-8 pb-32 min-h-screen">
-      <div className="flex justify-between items-end mb-8">
+      <div className="flex justify-between items-center mb-8" style={{ color: colors.text }}>
         <div>
-          <h1 className="text-4xl font-bold mb-2">Playlists</h1>
-          <p className="text-gray-400">{playlists.length} lista{playlists.length !== 1 ? 's' : ''}</p>
+          <h1 className="text-4xl font-black uppercase tracking-widest mb-2" style={{ color: colors.text }}>Playlists</h1>
+          <p className="text-gray-400" style={{ color: colors.subText }}>{playlists.length} playlist{playlists.length !== 1 ? 's' : ''}</p>
         </div>
         <button
           onClick={() => setIsCreateModalOpen(true)}
-          className="bg-white/10 hover:bg-white/20 text-white px-6 py-3 rounded-full font-bold transition-all"
+          className="px-6 py-3 rounded-full font-bold transition-all"
+          style={{ backgroundColor: colors.primary, color: '#000' }}
         >
-          + Nueva Lista
+          + Nueva Playlist
         </button>
       </div>
 
@@ -41,7 +54,7 @@ export default function PlaylistsScreen(): React.JSX.Element {
           return (
             <div
               key={playlist.id}
-              className="group relative flex flex-col cursor-pointer bg-white/5 rounded-2xl p-4 hover:bg-white/10 transition-all duration-300"
+              className="group relative flex flex-col cursor-pointer rounded-2xl p-4 transition-all duration-300"
               onMouseEnter={() => setHoveredId(playlist.id)}
               onMouseLeave={() => {
                 setHoveredId(null);
@@ -49,15 +62,17 @@ export default function PlaylistsScreen(): React.JSX.Element {
               }}
               onClick={() => navigate(`/detail/playlist/${playlist.id}`)}
             >
-              <div className="relative aspect-square w-full rounded-xl overflow-hidden mb-4 bg-white/5 shadow-lg group-hover:shadow-2xl transition-all duration-300">
+              <div
+                className="relative aspect-square w-full rounded-xl overflow-hidden mb-4 shadow-lg group-hover:shadow-2xl transition-all duration-300 group-hover:scale-105"
+                style={{ backgroundColor: colors.card }}
+              >
                 {playlist.cover ? (
-                  <img src={playlist.cover} alt={playlist.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                  <img src={playlist.cover} alt={playlist.name} className="w-full h-full object-cover transition-transform duration-500" />
                 ) : (
-                  <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-purple-900/40 to-blue-900/40 group-hover:scale-105 transition-transform duration-500">
-                    <Music2 size={64} className="text-white/30" />
+                  <div className="w-full h-full flex items-center justify-center transition-transform duration-500" style={{ background: `linear-gradient(to bottom right, ${colors.primary}40, ${colors.secondary}40)` }}>
+                    <Music2 size={64} style={{ color: colors.text + '30' }} />
                   </div>
                 )}
-
                 {/* Play Button Overlay */}
                 <div className={`absolute inset-0 bg-black/40 flex items-center justify-center transition-opacity duration-300 ${hoveredId === playlist.id || isPlayingContext ? 'opacity-100' : 'opacity-0'}`}>
                   <button
@@ -65,42 +80,49 @@ export default function PlaylistsScreen(): React.JSX.Element {
                       e.stopPropagation();
                       navigate(`/detail/playlist/${playlist.id}`);
                     }}
-                    className="w-14 h-14 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center hover:scale-110 hover:bg-white text-white hover:text-black transition-all transform translate-y-2 group-hover:translate-y-0"
+                    className="w-14 h-14 rounded-full backdrop-blur-md flex items-center justify-center hover:scale-110 transition-all transform translate-y-2 group-hover:translate-y-0" style={{ backgroundColor: colors.primary + '40', color: colors.text }}
                   >
                     <Play fill="currentColor" size={24} className="ml-1" />
                   </button>
                 </div>
-
                 {/* Context Menu Button */}
                 {!playlist.isAuto && (
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setContextMenuId(contextMenuId === playlist.id ? null : playlist.id);
-                    }}
-                    className={`absolute top-2 right-2 p-2 rounded-full bg-black/50 text-white backdrop-blur-md transition-opacity duration-300 ${hoveredId === playlist.id ? 'opacity-100' : 'opacity-0'}`}
-                  >
-                    <MoreVertical size={16} />
-                  </button>
+                  <>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setContextMenuId(contextMenuId === playlist.id ? null : playlist.id);
+                      }}
+                      className={`absolute top-2 right-2 p-2 rounded-full backdrop-blur-md transition-opacity duration-300 ${hoveredId === playlist.id ? 'opacity-100' : 'opacity-0'}`} style={{ backgroundColor: colors.card + '80', color: colors.text }}
+                    >
+                      <MoreVertical size={16} />
+                    </button>
+                  </>
                 )}
-
                 {/* Context Menu Dropdown */}
-                {contextMenuId === playlist.id && (
-                  <div className="absolute top-10 right-2 w-48 bg-[#1e1e1e] border border-white/10 rounded-xl shadow-2xl py-2 z-50">
+                {contextMenuId === playlist.id && ( // Use colors.card for background
+                  <div className="absolute top-10 right-2 w-48 border rounded-xl shadow-2xl py-2 z-50" style={{ backgroundColor: colors.card, borderColor: colors.border }}>
+                    <button // Add Edit button
+                      onClick={(e) => { e.stopPropagation(); handleEditPlaylist(playlist); setContextMenuId(null); }}
+                      className="w-full text-left px-4 py-2 hover:bg-white/10 flex items-center gap-2" style={{ color: colors.text }}
+                    >
+                      <Edit size={16} />
+                      Editar playlist
+                    </button>
                     <button
                       onClick={(e) => handleDelete(e, playlist.id)}
-                      className="w-full text-left px-4 py-2 hover:bg-white/10 text-red-400 flex items-center gap-2"
+                      className="w-full text-left px-4 py-2 hover:bg-white/10 flex items-center gap-2" style={{ color: colors.accent }}
                     >
                       <Trash2 size={16} />
-                      Eliminar lista
+                      Eliminar playlist
                     </button>
                   </div>
                 )}
               </div>
-
-              <h3 className="font-bold text-lg truncate text-white/90 group-hover:text-white transition-colors">{playlist.name}</h3>
-              <p className="text-sm text-gray-400 truncate mt-1">
-                {playlist.description || 'Lista de reproducción'}
+              {/* Use colors.text and colors.subText for text */}
+              <h3 className="font-bold text-lg truncate group-hover:text-white transition-colors" style={{ color: colors.text }}>{playlist.name}</h3>
+              <p className="text-sm truncate mt-1" style={{ color: colors.subText }}>
+                {playlist.description || 'Playlist'}
               </p>
             </div>
           );
@@ -108,6 +130,14 @@ export default function PlaylistsScreen(): React.JSX.Element {
       </div>
 
       <PlaylistCreateModal isOpen={isCreateModalOpen} onClose={() => setIsCreateModalOpen(false)} />
+
+      {editingPlaylist && (
+        <PlaylistEditModal
+          isOpen={isEditModalOpen}
+          onClose={() => setIsEditModalOpen(false)}
+          playlist={editingPlaylist}
+        />
+      )}
     </div>
   );
 }
