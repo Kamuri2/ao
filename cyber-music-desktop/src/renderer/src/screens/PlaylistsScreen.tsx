@@ -2,13 +2,13 @@ import { useState } from 'react';
 import { useAudio } from '../context/AudioContext';
 import { useNavigate } from 'react-router-dom';
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
-import { useTheme, ThemeColors } from '../context/ThemeContext';
+import { useTheme } from '../context/ThemeContext';
 import { Music2, Play, MoreVertical, Trash2, Edit } from 'lucide-react';
 import PlaylistCreateModal from '../components/PlaylistCreateModal';
 import PlaylistEditModal from '../components/PlaylistEditModal';
 
 export default function PlaylistsScreen() {
-  const { playlists, deletePlaylist, currentContextId, updatePlaylistCover } = useAudio();
+  const { playlists, deletePlaylist, currentContextId } = useAudio();
 
   const { colors } = useTheme();
   const navigate = useNavigate(); // eslint-disable-line @typescript-eslint/no-unused-vars

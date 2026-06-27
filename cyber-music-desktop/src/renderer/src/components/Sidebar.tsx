@@ -1,5 +1,5 @@
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Home, FolderOpen, Disc3, Mic2, Settings, ListMusic } from 'lucide-react';
+import { Home, FolderOpen, Disc3, Mic2, ListMusic } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
 import cybeCatLogo from '../assets/CybeCat.png';
 

@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Sun, Moon, Settings, ListMusic, Shuffle, Activity, Search, RefreshCw, Mic2 } from 'lucide-react';
+import { ListMusic, Shuffle, Activity, Search, Mic2 } from 'lucide-react';
 import { useAudio } from '../context/AudioContext';
 import { useTheme } from '../context/ThemeContext';
 import CoverImage from '../components/CoverImage';
@@ -43,7 +43,7 @@ const SongListItem = React.memo(({ item, isPlaying, onPress, index }: any) => {
 
 export default function HomeScreen() {
   const { songs, albums, artists, playSound, playWithShuffle, currentSong, loadSongsFromUri, queueLength, queuePosition } = useAudio();
-  const { colors, isDarkMode, toggleTheme } = useTheme();
+  const { colors } = useTheme();
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState('');
 
