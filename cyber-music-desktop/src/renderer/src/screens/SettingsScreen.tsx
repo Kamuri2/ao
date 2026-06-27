@@ -1,13 +1,28 @@
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, FolderOpen, Trash2, RefreshCw } from 'lucide-react';
 import { useTheme, baseThemes, ParticleType } from '../context/ThemeContext';
 import { useAudio } from '../context/AudioContext';
+import { Image as ImageIcon } from 'lucide-react';
+
+const popularFonts = [
+  "Inter", "Roboto", "Outfit", "Space Grotesk", "Syne", 
+  "Montserrat", "Poppins", "Oswald", "Raleway", "Nunito", 
+  "Playfair Display", "Cinzel", "Cormorant Garamond", "Josefin Sans", 
+  "Caveat", "Pacifico", "Dancing Script", "VT323", "Press Start 2P"
+];
 
 export default function SettingsScreen() {
   const navigate = useNavigate();
-  const { colors, isDarkMode, toggleTheme, themeFamily, setThemeFamily, particles, setParticles } = useTheme();
+  const { colors, isDarkMode, toggleTheme, themeFamily, setThemeFamily, particles, setParticles, customFont, setCustomFont, mascots, addMascot, removeMascot, lyricsFontSize, setLyricsFontSize } = useTheme();
   const { loadSongsFromUri, songs, isScanning, isCrossfadeEnabled, setIsCrossfadeEnabled, crossfadeDuration, setCrossfadeDuration } = useAudio();
   const currentFolder = localStorage.getItem('@music_folder');
+
+  const [draftFont, setDraftFont] = useState(customFont);
+
+  useEffect(() => {
+    setDraftFont(customFont);
+  }, [customFont]);
 
   const handleClearFolder = () => {
     localStorage.removeItem('@music_folder');
@@ -76,6 +91,124 @@ export default function SettingsScreen() {
                 {pType === 'none' ? 'Ninguno' : pType === 'snow' ? 'Nieve' : pType === 'bubbles' ? 'Burbujas' : 'Estrellas'}
               </button>
             ))}
+          </div>
+
+          <span className="font-medium mb-3 block mt-6" style={{ color: colors.subText }}>Tipografía (Google Fonts)</span>
+          <div className="flex flex-col gap-3">
+            <div className="flex flex-row gap-3">
+              <select 
+                value={popularFonts.includes(draftFont) ? draftFont : (draftFont === '' ? '' : 'custom')}
+                onChange={(e) => {
+                  if (e.target.value !== 'custom') {
+                    setDraftFont(e.target.value);
+                  }
+                }}
+                className="flex-1 px-4 py-3 rounded-lg border bg-transparent font-bold appearance-none cursor-pointer outline-none"
+                style={{ borderColor: colors.border, color: colors.text }}
+              >
+                <option value="" style={{ color: '#000' }}>Fuente del Sistema (Predeterminada)</option>
+                {popularFonts.map(font => (
+                  <option key={font} value={font} style={{ color: '#000', fontFamily: `"${font}", sans-serif` }}>{font}</option>
+                ))}
+                {!popularFonts.includes(draftFont) && draftFont !== '' && (
+                  <option value="custom" style={{ color: '#000' }}>Personalizada ({draftFont})</option>
+                )}
+              </select>
+              <button
+                onClick={() => setCustomFont('')}
+                className="px-4 py-3 rounded-lg border font-bold transition-transform active:scale-95 bg-red-500/10 text-red-500 hover:bg-red-500/20"
+                style={{ borderColor: colors.border }}
+              >
+                Restablecer
+              </button>
+            </div>
+            
+            <div className="flex flex-row gap-3">
+              <input 
+                type="text" 
+                placeholder="O escribe otra (ej. Roboto Mono)..." 
+                value={draftFont}
+                onChange={(e) => setDraftFont(e.target.value)}
+                className="flex-1 px-4 py-3 rounded-lg border bg-transparent font-bold outline-none focus:border-white/30"
+                style={{ borderColor: colors.border, color: colors.text }}
+              />
+              <button
+                onClick={() => setCustomFont(draftFont)}
+                className="px-6 py-3 rounded-lg font-bold transition-transform active:scale-95"
+                style={{ backgroundColor: colors.primary, color: '#000' }}
+              >
+                Aplicar
+              </button>
+            </div>
+          </div>
+          <p className="text-xs opacity-70 mt-2" style={{ color: colors.subText }}>Elige una fuente rápida o escribe su nombre y pulsa Aplicar para descargarla.</p>
+          
+          <span className="font-medium mb-3 block mt-8" style={{ color: colors.subText }}>Tamaño de Letras de Canciones</span>
+          <div className="flex flex-col gap-2">
+            <div className="flex flex-row items-center justify-between">
+              <span className="text-sm opacity-70" style={{ color: colors.subText }}>Más pequeño</span>
+              <span className="font-bold" style={{ color: colors.text }}>{lyricsFontSize}%</span>
+              <span className="text-sm opacity-70" style={{ color: colors.subText }}>Más grande</span>
+            </div>
+            <input 
+              type="range" 
+              min="50" 
+              max="150" 
+              step="5" 
+              value={lyricsFontSize}
+              onChange={(e) => setLyricsFontSize(Number(e.target.value))}
+              className="w-full h-2 rounded-lg appearance-none cursor-pointer bg-white/10 mt-1"
+              style={{ accentColor: colors.primary }}
+            />
+            <p className="text-xs opacity-70 mt-1" style={{ color: colors.subText }}>Ajusta el tamaño para que las letras largas quepan en una sola línea sin saltos.</p>
+          </div>
+        </div>
+
+        <div className="p-6 rounded-2xl border border-white/10 shadow-sm" style={{ backgroundColor: isDarkMode ? '#1e1e1e' : '#ffffff' }}>
+          <h2 className="text-xl font-bold mb-4" style={{ color: colors.text }}>Mascota Virtual</h2>
+          <div className="flex flex-col gap-4">
+            <div className="flex flex-row items-center justify-between">
+              <div>
+                <span className="font-medium block" style={{ color: colors.text }}>Mascotas Flotantes (Max 3)</span>
+                <span className="text-sm opacity-70" style={{ color: colors.subText }}>Sube GIFs o PNGs con fondo transparente.</span>
+              </div>
+              <button
+                className="flex items-center gap-2 px-4 py-3 rounded-lg font-bold transition-transform active:scale-95 disabled:opacity-50 disabled:scale-100"
+                style={{ backgroundColor: colors.primary, color: '#000' }}
+                disabled={mascots.length >= 3}
+                onClick={async () => {
+                  try {
+                    const url = await window.api.openImageFile();
+                    if (url) addMascot(url);
+                  } catch (e) {
+                    console.error(e);
+                  }
+                }}
+              >
+                <ImageIcon size={20} />
+                Importar
+              </button>
+            </div>
+            
+            <div className="flex flex-col gap-2">
+              {mascots.map((m, index) => (
+                <div key={m.id} className="flex flex-row justify-between items-center bg-black/5 dark:bg-white/5 p-4 rounded-lg">
+                  <div className="flex items-center gap-4">
+                    <img src={m.url} className="w-12 h-12 object-contain" alt="Mascot" />
+                    <span className="font-bold text-sm" style={{ color: colors.text }}>Mascota {index + 1}</span>
+                  </div>
+                  <button
+                    onClick={() => removeMascot(m.id)}
+                    className="px-4 py-2 rounded-lg bg-red-500/10 text-red-500 hover:bg-red-500/20 font-bold transition-colors"
+                  >
+                    Eliminar
+                  </button>
+                </div>
+              ))}
+              {mascots.length === 0 && (
+                <p className="text-sm text-center py-4 opacity-50" style={{ color: colors.text }}>No hay mascotas importadas.</p>
+              )}
+            </div>
           </div>
         </div>
 

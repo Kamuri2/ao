@@ -7,6 +7,7 @@ import HomeScreen from './screens/HomeScreen';
 import MiniPlayer from './components/MiniPlayer';
 import Sidebar from './components/Sidebar';
 import GlobalButtons from './components/GlobalButtons';
+import Mascot from './components/Mascot';
 
 import PlayerScreen from './screens/PlayerScreen';
 import SettingsScreen from './screens/SettingsScreen';
@@ -72,6 +73,7 @@ function AppContent() {
           </motion.div>
         )}
       </AnimatePresence>
+      <Mascot />
     </div>
   );
 }

@@ -173,7 +173,7 @@ export function setupIpc() {
   ipcMain.handle('dialog:openImageFile', async () => {
     const { canceled, filePaths } = await dialog.showOpenDialog({
       properties: ['openFile'],
-      filters: [{ name: 'Images', extensions: ['jpg', 'jpeg', 'png', 'webp'] }]
+      filters: [{ name: 'Images', extensions: ['jpg', 'jpeg', 'png', 'webp', 'gif'] }]
     });
     if (canceled || filePaths.length === 0) {
       return null;

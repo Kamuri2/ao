@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { useAudio } from '../context/AudioContext';
+import { useTheme } from '../context/ThemeContext';
 
 interface LyricLine {
   time: number;
@@ -9,6 +10,7 @@ interface LyricLine {
 
 export default function LyricsView() {
   const { metadata, progress } = useAudio();
+  const { lyricsFontSize } = useTheme();
   const [lyrics, setLyrics] = useState<LyricLine[]>([]);
   const [staticLyrics, setStaticLyrics] = useState<string | null>(null);
   const [isSynced, setIsSynced] = useState(true);
@@ -149,13 +151,15 @@ export default function LyricsView() {
               ref={isActive ? activeLineRef : null}
               className={`text-center transition-all duration-700 font-bold ${
                 isActive 
-                  ? 'text-white text-3xl md:text-4xl scale-105 py-4 drop-shadow-lg' 
+                  ? 'text-white scale-105 py-4 drop-shadow-lg' 
                   : isPassed 
-                    ? 'text-white/40 text-xl py-2' 
-                    : 'text-white/20 text-xl py-2'
+                    ? 'text-white/40 py-2' 
+                    : 'text-white/20 py-2'
               }`}
               style={{
-                 transformOrigin: 'center center'
+                 transformOrigin: 'center center',
+                 fontSize: isActive ? `${36 * (lyricsFontSize / 100)}px` : `${20 * (lyricsFontSize / 100)}px`,
+                 lineHeight: 1.4
               }}
             >
               {line.text || '\u00A0'}

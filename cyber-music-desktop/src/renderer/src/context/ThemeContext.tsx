@@ -99,6 +99,13 @@ type ThemeContextType = {
   backgroundImage: string | null;
   setBackgroundImage: (uri: string | null) => void;
   pickBackgroundImage: () => Promise<void>;
+  customFont: string;
+  setCustomFont: (font: string) => void;
+  mascots: { id: string, url: string }[];
+  addMascot: (url: string) => void;
+  removeMascot: (id: string) => void;
+  lyricsFontSize: number;
+  setLyricsFontSize: (val: number) => void;
 };
 
 const ThemeContext = createContext<ThemeContextType>({
@@ -114,6 +121,13 @@ const ThemeContext = createContext<ThemeContextType>({
   backgroundImage: null,
   setBackgroundImage: () => { },
   pickBackgroundImage: async () => { },
+  customFont: '',
+  setCustomFont: () => { },
+  mascots: [],
+  addMascot: () => { },
+  removeMascot: () => { },
+  lyricsFontSize: 100,
+  setLyricsFontSize: () => { }
 });
 
 export const useTheme = (): ThemeContextType => useContext(ThemeContext);
@@ -123,6 +137,9 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [isDarkMode, setIsDarkModeState] = useState<boolean>(true);
   const [particles, setParticlesState] = useState<ParticleType>('none');
   const [backgroundImage, setBackgroundImageState] = useState<string | null>(null);
+  const [customFont, setCustomFontState] = useState<string>('');
+  const [mascots, setMascotsState] = useState<{ id: string, url: string }[]>([]);
+  const [lyricsFontSize, setLyricsFontSizeState] = useState<number>(100);
 
   useEffect(() => {
     const fam = localStorage.getItem('@theme_family');
@@ -136,7 +153,55 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
     const bg = localStorage.getItem('@background_image');
     if (bg) setBackgroundImageState(bg);
+
+    const font = localStorage.getItem('@custom_font');
+    if (font) setCustomFontState(font);
+
+    const savedMascots = localStorage.getItem('@mascots_list');
+    if (savedMascots) {
+      try {
+        setMascotsState(JSON.parse(savedMascots));
+      } catch (e) { }
+    }
+
+    const savedLyricsSize = localStorage.getItem('@lyrics_font_size');
+    if (savedLyricsSize) {
+      setLyricsFontSizeState(Number(savedLyricsSize));
+    }
   }, []);
+
+  useEffect(() => {
+    const linkId = 'google-fonts-custom';
+    const styleId = 'google-fonts-custom-style';
+    
+    let link = document.getElementById(linkId) as HTMLLinkElement;
+    let style = document.getElementById(styleId) as HTMLStyleElement;
+
+    if (customFont) {
+      if (!link) {
+        link = document.createElement('link');
+        link.id = linkId;
+        link.rel = 'stylesheet';
+        document.head.appendChild(link);
+      }
+      link.href = `https://fonts.googleapis.com/css2?family=${customFont.replace(/ /g, '+')}:wght@400;700;900&display=swap`;
+      
+      if (!style) {
+        style = document.createElement('style');
+        style.id = styleId;
+        document.head.appendChild(style);
+      }
+      style.innerHTML = `
+        * {
+          font-family: "${customFont}", sans-serif !important;
+        }
+      `;
+    } else {
+      if (style) {
+        style.innerHTML = '';
+      }
+    }
+  }, [customFont]);
 
   const setBackgroundImage = (uri: string | null): void => {
     setBackgroundImageState(uri);
@@ -178,6 +243,34 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     localStorage.setItem('@particles', type);
   };
 
+  const setCustomFont = (font: string): void => {
+    setCustomFontState(font);
+    localStorage.setItem('@custom_font', font);
+  };
+
+  const addMascot = (url: string): void => {
+    setMascotsState(prev => {
+      if (prev.length >= 3) return prev;
+      const newMascots = [...prev, { id: Math.random().toString(36).substring(7), url }];
+      localStorage.setItem('@mascots_list', JSON.stringify(newMascots));
+      return newMascots;
+    });
+  };
+
+  const removeMascot = (id: string): void => {
+    setMascotsState(prev => {
+      const newMascots = prev.filter(m => m.id !== id);
+      localStorage.setItem('@mascots_list', JSON.stringify(newMascots));
+      localStorage.removeItem(`@mascot_pos_${id}`);
+      return newMascots;
+    });
+  };
+
+  const setLyricsFontSize = (val: number): void => {
+    setLyricsFontSizeState(val);
+    localStorage.setItem('@lyrics_font_size', val.toString());
+  };
+
   const toggleTheme = (): void => {
     setIsDarkMode(!isDarkMode);
   };
@@ -190,7 +283,9 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     <ThemeContext.Provider value={{
       themeFamily, setThemeFamily, isDarkMode, setIsDarkMode, toggleTheme,
       colors: currentTheme.colors, particles, setParticles, themeId,
-      backgroundImage, setBackgroundImage, pickBackgroundImage
+      backgroundImage, setBackgroundImage, pickBackgroundImage,
+      customFont, setCustomFont, mascots, addMascot, removeMascot,
+      lyricsFontSize, setLyricsFontSize
     }}>
       <div style={{
         flex: 1,

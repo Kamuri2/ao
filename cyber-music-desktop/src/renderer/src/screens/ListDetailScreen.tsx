@@ -271,17 +271,18 @@ export default function ListDetailScreen() {
       />
 
       {/* Header Section (Spotify Style) */}
-      <div className="relative pt-20 pb-8 px-8 flex flex-col md:flex-row items-end">
+      <div className="relative pt-20 pb-8 px-8 flex flex-col lg:flex-row items-end justify-between gap-8">
         <div className="absolute top-6 left-6 z-10">
           <button onClick={handleBack} className="p-2 rounded-full bg-black/20 hover:bg-black/40 text-white transition-colors backdrop-blur-md">
             <ArrowLeft size={24} />
           </button>
         </div>
 
-        {/* Cover */}
-        <div
-          className="relative w-64 h-64 md:w-[320px] md:h-[320px] shadow-[0_4px_60px_rgba(0,0,0,0.5)] overflow-hidden flex-shrink-0 z-10 mt-8 md:mt-0 rounded-2xl group"
-        >
+        <div className="flex flex-col md:flex-row items-end flex-1 w-full">
+          {/* Cover */}
+          <div
+            className="relative w-64 h-64 md:w-[320px] md:h-[320px] shadow-[0_4px_60px_rgba(0,0,0,0.5)] overflow-hidden flex-shrink-0 z-10 mt-8 md:mt-0 rounded-2xl group"
+          >
           <CoverImage
             coverUrl={cover}
             audioPath={audioPath}
@@ -346,17 +347,18 @@ export default function ListDetailScreen() {
           </div>
 
           {type === 'artist' && (
-            <div className="mt-6 flex flex-col gap-4">
+            <div className="mt-8 flex flex-col gap-4">
+              {/* Mobile bio (hidden on large screens) */}
               {artistBio && (
-                <div className="bg-black/10 dark:bg-white/5 p-4 rounded-xl border border-black/5 dark:border-white/5">
+                <div className="lg:hidden bg-black/10 dark:bg-white/5 p-4 rounded-xl border border-black/5 dark:border-white/5 mb-4">
                   <h3 className="font-bold text-sm uppercase tracking-wider mb-2 opacity-70" style={{ color: colors.text }}>Acerca de</h3>
-                  <p className="text-sm md:text-base opacity-90 max-w-4xl leading-relaxed" style={{ color: colors.text }}>
+                  <p className="text-sm opacity-90 leading-relaxed" style={{ color: colors.text }}>
                     {artistBio}
                   </p>
                 </div>
               )}
 
-              <div className="flex flex-row gap-3">
+              <div className="flex flex-row flex-wrap gap-3">
                 <button
                   onClick={() => openLink(`https://open.spotify.com/search/${encodeURIComponent(title)}/artists`)}
                   className="flex items-center gap-2 px-4 py-2 rounded-full bg-[#1DB954]/20 hover:bg-[#1DB954]/30 text-[#1DB954] transition-colors text-sm font-bold"
@@ -379,6 +381,17 @@ export default function ListDetailScreen() {
             </div>
           )}
         </div>
+        </div>
+
+        {/* Right Side Bio (Desktop) */}
+        {type === 'artist' && artistBio && (
+          <div className="hidden lg:flex flex-col w-[400px] flex-shrink-0 z-10 bg-black/10 dark:bg-white/5 p-6 rounded-2xl border border-black/5 dark:border-white/5 max-h-[320px] overflow-y-auto [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-thumb]:bg-white/20 [&::-webkit-scrollbar-thumb]:rounded-full">
+            <h3 className="font-bold text-sm uppercase tracking-wider mb-3 opacity-70" style={{ color: colors.text }}>Acerca del Artista</h3>
+            <p className="text-sm opacity-90 leading-relaxed" style={{ color: colors.text }}>
+              {artistBio}
+            </p>
+          </div>
+        )}
       </div>
 
       {/* Action Buttons */}

@@ -32,7 +32,7 @@ export default function PlaylistsScreen() {
   };
 
   return (
-    <div className="p-8 pb-32 min-h-screen">
+    <div className="p-8 pt-20 pb-32 min-h-screen">
       <div className="flex justify-between items-center mb-8" style={{ color: colors.text }}>
         <div>
           <h1 className="text-4xl font-black uppercase tracking-widest mb-2" style={{ color: colors.text }}>Playlists</h1>
