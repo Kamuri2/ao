@@ -99,26 +99,26 @@ export default function PlaylistsScreen() {
                     </button>
                   </>
                 )}
-                {/* Context Menu Dropdown */}
-                {contextMenuId === playlist.id && ( // Use colors.card for background
-                  <div className="absolute top-10 right-2 w-48 border rounded-xl shadow-2xl py-2 z-50" style={{ backgroundColor: colors.card, borderColor: colors.border }}>
-                    <button // Add Edit button
-                      onClick={(e) => { e.stopPropagation(); handleEditPlaylist(playlist); setContextMenuId(null); }}
-                      className="w-full text-left px-4 py-2 hover:bg-white/10 flex items-center gap-2" style={{ color: colors.text }}
-                    >
-                      <Edit size={16} />
-                      Editar playlist
-                    </button>
-                    <button
-                      onClick={(e) => handleDelete(e, playlist.id)}
-                      className="w-full text-left px-4 py-2 hover:bg-white/10 flex items-center gap-2" style={{ color: colors.accent }}
-                    >
-                      <Trash2 size={16} />
-                      Eliminar playlist
-                    </button>
-                  </div>
-                )}
               </div>
+              {/* Context Menu Dropdown */}
+              {contextMenuId === playlist.id && (
+                <div className="absolute top-14 right-6 w-48 border rounded-xl shadow-2xl py-2 z-50" style={{ backgroundColor: colors.card, borderColor: colors.border }}>
+                  <button
+                    onClick={(e) => { e.stopPropagation(); handleEditPlaylist(playlist); setContextMenuId(null); }}
+                    className="w-full text-left px-4 py-2 hover:bg-white/10 flex items-center gap-2" style={{ color: colors.text }}
+                  >
+                    <Edit size={16} />
+                    Editar playlist
+                  </button>
+                  <button
+                    onClick={(e) => handleDelete(e, playlist.id)}
+                    className="w-full text-left px-4 py-2 hover:bg-white/10 flex items-center gap-2" style={{ color: colors.accent }}
+                  >
+                    <Trash2 size={16} />
+                    Eliminar playlist
+                  </button>
+                </div>
+              )}
               {/* Use colors.text and colors.subText for text */}
               <h3 className="font-bold text-lg truncate group-hover:text-white transition-colors" style={{ color: colors.text }}>{playlist.name}</h3>
               <p className="text-sm truncate mt-1" style={{ color: colors.subText }}>
