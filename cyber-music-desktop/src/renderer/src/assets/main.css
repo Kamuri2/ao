@@ -86,4 +86,13 @@
   .animate-gradient-move {
     animation: gradient-move 25s ease-in-out infinite alternate;
   }
+
+  @keyframes marquee-text {
+    0% { transform: translateX(0); }
+    100% { transform: translateX(-100%); }
+  }
+
+  .animate-marquee-text {
+    animation: marquee-text 12s linear infinite;
+  }
 }

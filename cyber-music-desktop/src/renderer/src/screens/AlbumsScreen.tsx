@@ -52,7 +52,7 @@ export default function AlbumsScreen() {
 
   return (
     <div className="flex-1 px-8 py-8 max-w-full w-full animate-fade-in relative">
-      <h1 className="text-4xl font-black uppercase tracking-widest mb-8" style={{ color: colors.text }}>Álbums</h1>
+      <h1 className="text-4xl font-black uppercase tracking-widest mb-8" style={{ color: colors.text }}>Albums</h1>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 w-full pb-32 pr-12">
         {sortedAlbums.map((album: any) => {

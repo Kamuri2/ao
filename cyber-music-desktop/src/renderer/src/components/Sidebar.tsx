@@ -38,7 +38,7 @@ export default function Sidebar() {
         <NavItem to="/" icon={Home} label="Inicio" />
         <NavItem to="/folders" icon={FolderOpen} label="Carpetas" />
         <NavItem to="/playlists" icon={ListMusic} label="Playlist" />
-        <NavItem to="/albums" icon={Disc3} label="Álbums" />
+        <NavItem to="/albums" icon={Disc3} label="Albums" />
         <NavItem to="/artists" icon={Mic2} label="Artistas" />
       </div>
     </div>

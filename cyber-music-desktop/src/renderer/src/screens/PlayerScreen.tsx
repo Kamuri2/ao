@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowLeft, Play, Pause, SkipBack, SkipForward, Repeat, Shuffle, ListMusic, Mic2, Heart, Plus, ThumbsDown } from 'lucide-react';
@@ -9,6 +9,46 @@ import QueuePanel from '../components/QueuePanel';
 import LyricsView from '../components/LyricsView';
 import AddToPlaylistModal from '../components/AddToPlaylistModal';
 import PlaylistCreateModal from '../components/PlaylistCreateModal';
+
+const MarqueeText = ({ text, className }: { text: string, className?: string }) => {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const textRef = useRef<HTMLSpanElement>(null);
+  const [isOverflowing, setIsOverflowing] = useState(false);
+
+  useEffect(() => {
+    const checkOverflow = () => {
+      if (containerRef.current && textRef.current) {
+        setIsOverflowing(textRef.current.offsetWidth > containerRef.current.clientWidth);
+      }
+    };
+    checkOverflow();
+    const t = setTimeout(checkOverflow, 100);
+    window.addEventListener('resize', checkOverflow);
+    return () => {
+      clearTimeout(t);
+      window.removeEventListener('resize', checkOverflow);
+    };
+  }, [text]);
+
+  if (!isOverflowing) {
+    return (
+      <div ref={containerRef} className={`overflow-hidden whitespace-nowrap w-full ${className}`}>
+        <span ref={textRef} className="inline-block">{text}</span>
+      </div>
+    );
+  }
+
+  return (
+    <div className={`overflow-hidden whitespace-nowrap flex flex-row w-full ${className}`} style={{ WebkitMaskImage: 'linear-gradient(to right, transparent, black 10px, black calc(100% - 10px), transparent)' }}>
+      <div className="flex animate-marquee-text shrink-0">
+        <span className="pr-16">{text}</span>
+      </div>
+      <div className="flex animate-marquee-text shrink-0">
+        <span className="pr-16">{text}</span>
+      </div>
+    </div>
+  );
+};
 
 export default function PlayerScreen() {
   const { colors } = useTheme();
@@ -236,9 +276,10 @@ export default function PlayerScreen() {
                 transition={{ type: "tween", duration: 0.3, ease: "easeOut" }}
                 className="w-full"
               >
-                <h2 className="text-3xl font-black text-white truncate mb-1">
-                  {currentSong.title || currentSong.filename.replace(/\.[^/.]+$/, "")}
-                </h2>
+                <MarqueeText 
+                  text={currentSong.title || currentSong.filename.replace(/\.[^/.]+$/, "")}
+                  className="text-3xl font-black text-white mb-1"
+                />
                 <p 
                   className="text-lg font-medium text-white/70 truncate cursor-pointer hover:underline hover:text-white transition-colors w-fit"
                   onClick={() => {

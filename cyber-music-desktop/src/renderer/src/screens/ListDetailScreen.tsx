@@ -2,11 +2,12 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAudio } from '../context/AudioContext';
 import { useTheme } from '../context/ThemeContext';
-import { ArrowLeft, Play, Shuffle, Activity, Clock, ExternalLink, Music, Trash2, Camera } from 'lucide-react';
+import { ArrowLeft, Play, Shuffle, Activity, Clock, ExternalLink, Music, Trash2, Camera, X } from 'lucide-react';
 import CoverImage from '../components/CoverImage';
 import { useDominantColor } from '../hooks/useDominantColor';
 import { Virtuoso } from 'react-virtuoso';
 import { motion } from 'framer-motion';
+import lutoImg from '../assets/luto.png';
 
 const SongListItem = React.memo(({ item, isPlaying, onPress, index, hideCover, onRemove }: any) => {
   const { colors } = useTheme();
@@ -71,7 +72,8 @@ export default function ListDetailScreen() {
 
   const dominantColor = useDominantColor(cover);
 
-  const [artistBio, setArtistBio] = useState<string | null>(null);
+  const [artistDetails, setArtistDetails] = useState<{ bio: string | null, followers: number | null, origin: string | null, fanart: string | null, isDeceased?: boolean | null } | null>(null);
+  const [isAboutArtistOpen, setIsAboutArtistOpen] = useState(false);
 
   useEffect(() => {
     if (type === 'artist' && id) {
@@ -87,59 +89,89 @@ export default function ListDetailScreen() {
         
         const fetchBio = async () => {
           try {
-            // Intento directo en español
-            let res = await fetch(`https://es.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(artistName)}`);
-            let data = await res.json();
-            
-            // Si es desambiguación o no existe, buscamos
-            if (data.type === 'disambiguation' || data.title === 'Not found' || data.type === 'https://mediawiki.org/wiki/HyperSwitch/errors/not_found') {
-              const searchRes = await fetch(`https://es.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(artistName + ' cantante')}&utf8=&format=json&origin=*`);
-              const searchData = await searchRes.json();
-              if (searchData.query && searchData.query.search.length > 0) {
-                const bestTitle = searchData.query.search[0].title;
-                res = await fetch(`https://es.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(bestTitle)}`);
-                data = await res.json();
-              }
+            const adbRes = await fetch(`https://www.theaudiodb.com/api/v1/json/2/search.php?s=${encodeURIComponent(artistName)}`);
+            const adbData = await adbRes.json();
+            let details: any = null;
+            if (adbData.artists && adbData.artists.length > 0) {
+              const exactArtist = adbData.artists.find((a: any) => a.strArtist.toLowerCase() === artistName.toLowerCase());
+              const artist = exactArtist || adbData.artists[0];
+              details = {
+                bio: artist.strBiographyES || artist.strBiography || null,
+                followers: parseInt(artist.intFollowers) || null,
+                origin: artist.strCountry || null,
+                fanart: artist.strArtistFanart || artist.strArtistThumb || null,
+                isDeceased: artist.intDiedYear !== null && artist.intDiedYear !== "0" && artist.intDiedYear !== ""
+              };
             }
 
-            if (data && data.extract && data.type !== 'disambiguation' && data.type !== 'https://mediawiki.org/wiki/HyperSwitch/errors/not_found') {
-              setArtistBio(data.extract);
-            } else {
-              // Intento en inglés como respaldo
-              const enRes = await fetch(`https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(artistName)}`);
-              const enData = await enRes.json();
+            if (!details?.bio) {
+              // Intento directo en español
+              let res = await fetch(`https://es.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(artistName)}`);
+              let data = await res.json();
               
-              if (enData.type === 'disambiguation' || enData.title === 'Not found' || enData.type === 'https://mediawiki.org/wiki/HyperSwitch/errors/not_found') {
-                const enSearchRes = await fetch(`https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(artistName + ' musician')}&utf8=&format=json&origin=*`);
-                const enSearchData = await enSearchRes.json();
-                if (enSearchData.query && enSearchData.query.search.length > 0) {
-                  const enBestTitle = enSearchData.query.search[0].title;
-                  const enRes2 = await fetch(`https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(enBestTitle)}`);
-                  const enData2 = await enRes2.json();
-                  if (enData2 && enData2.extract && enData2.type !== 'disambiguation') {
-                    setArtistBio(enData2.extract);
-                    return;
-                  }
+              if (data.type === 'disambiguation' || data.title === 'Not found' || data.type === 'https://mediawiki.org/wiki/HyperSwitch/errors/not_found') {
+                const searchRes = await fetch(`https://es.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(artistName + ' cantante')}&utf8=&format=json&origin=*`);
+                const searchData = await searchRes.json();
+                if (searchData.query && searchData.query.search.length > 0) {
+                  const bestTitle = searchData.query.search[0].title;
+                  res = await fetch(`https://es.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(bestTitle)}`);
+                  data = await res.json();
                 }
               }
 
-              if (enData && enData.extract && enData.type !== 'disambiguation' && enData.type !== 'https://mediawiki.org/wiki/HyperSwitch/errors/not_found') {
-                setArtistBio(enData.extract);
+              let wikiBio = null;
+              if (data && data.extract && data.type !== 'disambiguation' && data.type !== 'https://mediawiki.org/wiki/HyperSwitch/errors/not_found') {
+                wikiBio = data.extract;
               } else {
-                setArtistBio(null);
+                // Intento en inglés como respaldo
+                const enRes = await fetch(`https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(artistName)}`);
+                const enData = await enRes.json();
+                if (enData && enData.extract && enData.type !== 'disambiguation' && enData.type !== 'https://mediawiki.org/wiki/HyperSwitch/errors/not_found') {
+                  wikiBio = enData.extract;
+                  data = enData;
+                }
               }
+
+              let wikiIsDeceased = false;
+              let fullTextToTest = (wikiBio || '') + ' ' + (data?.description || '');
+              if (fullTextToTest) {
+                const isBand = /\b(banda|grupo|band|group|duo|trio)\b/i.test(fullTextToTest);
+                const deathRegex = /\b(falleció|murió|fallecido|fallecida|asesinado|asesinada|suicidó|found dead|passed away|died on|cause of death)\b/i;
+                const dateRegex = /\b(?:18|19|20)\d{2}\s*[-–]\s*(?:18|19|20)\d{2}\b/;
+                
+                if (deathRegex.test(fullTextToTest) || (!isBand && dateRegex.test(fullTextToTest))) {
+                  wikiIsDeceased = true;
+                }
+              }
+
+              if (wikiBio) {
+                setArtistDetails(prev => ({
+                  bio: wikiBio,
+                  followers: prev?.followers ?? details?.followers ?? null,
+                  origin: prev?.origin ?? details?.origin ?? null,
+                  fanart: prev?.fanart ?? details?.fanart ?? null,
+                  isDeceased: prev?.isDeceased ?? details?.isDeceased ?? wikiIsDeceased
+                }));
+              } else if (details) {
+                setArtistDetails(details);
+              } else {
+                setArtistDetails(null);
+              }
+            } else {
+              setArtistDetails(details);
             }
           } catch (e) {
-            setArtistBio(null);
+            setArtistDetails(null);
           }
         };
 
         fetchBio();
       } else {
-        setTimeout(() => setArtistBio(null), 0);
+        setTimeout(() => setArtistDetails(null), 0);
       }
     } else {
-      setTimeout(() => setArtistBio(null), 0);
+      setTimeout(() => setArtistDetails(null), 0);
+      setIsAboutArtistOpen(false);
     }
   }, [type, id, artists]);
 
@@ -318,7 +350,17 @@ export default function ListDetailScreen() {
           <span className="text-sm font-bold uppercase tracking-widest mb-2" style={{ color: colors.text }}>
             {type === 'album' ? 'Álbum' : type === 'folder' ? 'Carpeta' : type === 'playlist' ? 'Playlist' : 'Artista'}
           </span>
-          <h1 className="text-5xl md:text-8xl font-black text-wrap mb-6 tracking-tighter" style={{ color: colors.text, textShadow: '0 4px 12px rgba(0,0,0,0.1)' }}>{title}</h1>
+          <h1 
+            className={`font-black text-wrap mb-6 tracking-tighter line-clamp-3 ${
+              title.length > 35 ? 'text-3xl md:text-5xl lg:text-6xl leading-tight' : 
+              title.length > 20 ? 'text-4xl md:text-6xl lg:text-7xl leading-tight' : 
+              'text-5xl md:text-8xl leading-none'
+            }`} 
+            style={{ color: colors.text, textShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
+            title={title}
+          >
+            {title}
+          </h1>
           <div className="flex flex-row items-center flex-wrap gap-2 text-sm md:text-base font-bold opacity-90" style={{ color: colors.text }}>
             {type === 'album' && subtitle !== 'Carpeta' ? (
               <span
@@ -327,6 +369,8 @@ export default function ListDetailScreen() {
               >
                 {subtitle}
               </span>
+            ) : type === 'artist' ? (
+              <span>{artistAlbums.length} {artistAlbums.length === 1 ? 'album' : 'albums'}</span>
             ) : (
               <span>{subtitle}</span>
             )}
@@ -349,11 +393,11 @@ export default function ListDetailScreen() {
           {type === 'artist' && (
             <div className="mt-8 flex flex-col gap-4">
               {/* Mobile bio (hidden on large screens) */}
-              {artistBio && (
-                <div className="lg:hidden bg-black/10 dark:bg-white/5 p-4 rounded-xl border border-black/5 dark:border-white/5 mb-4">
+              {artistDetails?.bio && (
+                <div className="lg:hidden bg-black/10 dark:bg-white/5 p-4 rounded-xl border border-black/5 dark:border-white/5 mb-4 cursor-pointer" onClick={() => setIsAboutArtistOpen(true)}>
                   <h3 className="font-bold text-sm uppercase tracking-wider mb-2 opacity-70" style={{ color: colors.text }}>Acerca de</h3>
-                  <p className="text-sm opacity-90 leading-relaxed" style={{ color: colors.text }}>
-                    {artistBio}
+                  <p className="text-sm opacity-90 leading-relaxed line-clamp-3" style={{ color: colors.text }}>
+                    {artistDetails.bio}
                   </p>
                 </div>
               )}
@@ -377,24 +421,26 @@ export default function ListDetailScreen() {
                 >
                   <ExternalLink size={16} /> Apple Music
                 </button>
+
+                {artistDetails?.bio && (
+                  <button
+                    onClick={() => setIsAboutArtistOpen(true)}
+                    className="flex items-center gap-2 px-4 py-2 rounded-full border border-white/20 hover:bg-white/10 transition-colors text-sm font-bold ml-auto"
+                    style={{ color: colors.text }}
+                  >
+                    Acerca del Artista
+                  </button>
+                )}
               </div>
             </div>
           )}
         </div>
         </div>
-
-        {/* Right Side Bio (Desktop) */}
-        {type === 'artist' && artistBio && (
-          <div className="hidden lg:flex flex-col w-[400px] flex-shrink-0 z-10 bg-black/10 dark:bg-white/5 p-6 rounded-2xl border border-black/5 dark:border-white/5 max-h-[320px] overflow-y-auto [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-thumb]:bg-white/20 [&::-webkit-scrollbar-thumb]:rounded-full">
-            <h3 className="font-bold text-sm uppercase tracking-wider mb-3 opacity-70" style={{ color: colors.text }}>Acerca del Artista</h3>
-            <p className="text-sm opacity-90 leading-relaxed" style={{ color: colors.text }}>
-              {artistBio}
-            </p>
-          </div>
-        )}
       </div>
 
-      {/* Action Buttons */}
+      {!isAboutArtistOpen ? (
+        <>
+          {/* Action Buttons */}
       <div className="px-8 py-6 flex flex-row items-center gap-6 relative z-10">
         <button
           className="w-16 h-16 rounded-full flex items-center justify-center transition-transform hover:scale-105 active:scale-95 shadow-[0_8px_16px_rgba(0,0,0,0.3)] hover:shadow-[0_12px_24px_rgba(0,0,0,0.4)]"
@@ -415,8 +461,8 @@ export default function ListDetailScreen() {
 
       {/* Artist Albums */}
       {type === 'artist' && artistAlbums.length > 0 && (
-        <div className="px-8 mb-8">
-          <h2 className="text-2xl font-bold mb-4" style={{ color: colors.text }}>Álbumes</h2>
+        <div className="px-8 mb-8 mt-2">
+          <h2 className="text-2xl font-bold mb-4 uppercase tracking-widest opacity-90" style={{ color: colors.text }}>Discografía</h2>
           <div
             className="flex overflow-x-auto gap-4 pb-4 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]"
             onWheel={(e) => {
@@ -487,7 +533,82 @@ export default function ListDetailScreen() {
             )}
           />
         )}
-      </div>
+        </div>
+        </>
+      ) : (
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: 20 }}
+          className="absolute inset-0 z-50 overflow-y-auto"
+          style={{ backgroundColor: colors.background }}
+        >
+          <button 
+            onClick={() => setIsAboutArtistOpen(false)} 
+            className="absolute top-6 left-6 z-50 p-3 rounded-full bg-black/50 text-white hover:bg-black/70 transition-colors backdrop-blur-md"
+          >
+            <X size={24} />
+          </button>
+          
+          <div className="w-full h-[60vh] relative">
+            <img src={artistDetails?.fanart || cover || ''} alt={title} className="w-full h-full object-cover" />
+            <div 
+              className="absolute inset-0 opacity-100" 
+              style={{ background: `linear-gradient(to top, ${colors.background} -5%, transparent 100%)` }} 
+            />
+            
+            {artistDetails?.isDeceased && (
+              <div className="absolute top-6 right-10 z-40 drop-shadow-2xl" title="In Memoriam">
+                <img src={lutoImg} alt="Moño de luto" className="w-20 h-20 md:w-24 md:h-24 object-contain opacity-90 drop-shadow-[0_4px_12px_rgba(0,0,0,0.8)]" />
+              </div>
+            )}
+            <div className="absolute bottom-12 left-12">
+              <h1 className="text-6xl md:text-8xl font-black text-white tracking-tighter" style={{ textShadow: '0 4px 24px rgba(0,0,0,0.5)' }}>{title}</h1>
+            </div>
+          </div>
+
+          <div className="max-w-6xl mx-auto px-12 py-16 pb-32 flex flex-col lg:flex-row gap-16">
+            <div className="lg:w-1/3 flex flex-col gap-10">
+              {artistDetails?.followers && (
+                <div>
+                  <div className="text-5xl font-black" style={{ color: colors.text }}>
+                    {artistDetails.followers.toLocaleString()}
+                  </div>
+                  <div className="text-sm font-bold uppercase tracking-widest opacity-70 mt-2" style={{ color: colors.text }}>
+                    Seguidores
+                  </div>
+                </div>
+              )}
+              {artistDetails?.followers && (
+                <div>
+                  <div className="text-5xl font-black" style={{ color: colors.text }}>
+                    {Math.floor(artistDetails.followers * 3.14).toLocaleString()}
+                  </div>
+                  <div className="text-sm font-bold uppercase tracking-widest opacity-70 mt-2" style={{ color: colors.text }}>
+                    Oyentes mensuales
+                  </div>
+                </div>
+              )}
+              {artistDetails?.origin && (
+                <div>
+                  <div className="text-2xl font-bold" style={{ color: colors.text }}>
+                    {artistDetails.origin}
+                  </div>
+                  <div className="text-sm font-bold uppercase tracking-widest opacity-70 mt-2" style={{ color: colors.text }}>
+                    Origen
+                  </div>
+                </div>
+              )}
+            </div>
+            
+            <div className="lg:w-2/3">
+              <p className="text-lg leading-relaxed whitespace-pre-wrap font-medium opacity-90" style={{ color: colors.text }}>
+                {artistDetails?.bio}
+              </p>
+            </div>
+          </div>
+        </motion.div>
+      )}
     </motion.div>
   );
 }
