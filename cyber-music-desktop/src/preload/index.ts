@@ -11,7 +11,10 @@ const api = {
   getMetadata: (filePath: string) => ipcRenderer.invoke('fs:getMetadata', filePath),
   getCover: (filePath: string) => ipcRenderer.invoke('fs:getCover', filePath),
   getArtistImage: (artistName: string) => ipcRenderer.invoke('api:getArtistImage', artistName),
-  getArtistCache: () => ipcRenderer.invoke('api:getArtistCache')
+  getArtistCache: () => ipcRenderer.invoke('api:getArtistCache'),
+  translateLyrics: (songId: string, lines: string[], targetLang: string = 'es') => ipcRenderer.invoke('api:translateLyrics', songId, lines, targetLang),
+  translateUI: (langCode: string, baseDictionary: any) => ipcRenderer.invoke('api:translateUI', langCode, baseDictionary),
+  getTranslatedUI: (langCode: string) => ipcRenderer.invoke('api:getTranslatedUI', langCode)
 }
 // Use `contextBridge` APIs to expose Electron APIs to
 // renderer only if context isolation is enabled, otherwise

@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowLeft, Play, Pause, SkipBack, SkipForward, Repeat, Shuffle, ListMusic, Mic2, Heart, Plus, ThumbsDown } from 'lucide-react';
 import { useAudio } from '../context/AudioContext';
 import { useTheme } from '../context/ThemeContext';
+import { useTranslation } from 'react-i18next';
 import CoverImage from '../components/CoverImage';
 import QueuePanel from '../components/QueuePanel';
 import LyricsView from '../components/LyricsView';
@@ -53,6 +54,7 @@ const MarqueeText = ({ text, className }: { text: string, className?: string }) 
 export default function PlayerScreen() {
   const { colors } = useTheme();
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const [isQueueOpen, setIsQueueOpen] = useState(false);
   const [isIdle, setIsIdle] = useState(false);
   const [isAddToPlaylistOpen, setIsAddToPlaylistOpen] = useState(false);
@@ -99,13 +101,13 @@ export default function PlayerScreen() {
   if (!currentSong) {
     return (
       <div className="flex-1 flex flex-col items-center justify-center min-h-screen">
-        <p className="text-xl font-bold" style={{ color: colors.text }}>No hay canción reproduciéndose</p>
+        <p className="text-xl font-bold" style={{ color: colors.text }}>{t('home.noResults')}</p>
         <button
           onClick={() => setIsPlayerOpen(false)}
           className="mt-4 px-6 py-2 rounded-full font-bold"
           style={{ backgroundColor: colors.primary, color: '#000' }}
         >
-          Volver
+          {t('player.back', 'Volver')}
         </button>
       </div>
     );
@@ -143,19 +145,19 @@ export default function PlayerScreen() {
         </button>
         <div className="text-center flex-1 pr-11">
           <p className="text-xs font-bold text-white/50 tracking-widest uppercase">
-            Reproduciendo desde {(() => {
-              if (!currentContextId || currentContextId === 'all') return 'tu música';
-              if (currentContextId === 'queue') return 'la Queue';
-              if (currentContextId === 'favorites') return 'tus favoritos';
-              if (currentContextId.startsWith('album:')) return `el álbum • ${currentContextId.split('album:')[1]}`;
-              if (currentContextId.startsWith('artist:')) return `el artista • ${currentContextId.split('artist:')[1]}`;
-              if (currentContextId.startsWith('folder:')) return `la carpeta • ${currentContextId.split('folder:')[1]}`;
+            {t('player.playingFrom', 'Reproduciendo desde')} {(() => {
+              if (!currentContextId || currentContextId === 'all') return t('sidebar.home', 'tu música');
+              if (currentContextId === 'queue') return 'Queue';
+              if (currentContextId === 'favorites') return t('sidebar.favorites', 'tus favoritos');
+              if (currentContextId.startsWith('album:')) return `${t('albums.title', 'Álbum')} • ${currentContextId.split('album:')[1]}`;
+              if (currentContextId.startsWith('artist:')) return `${t('artists.title', 'Artista')} • ${currentContextId.split('artist:')[1]}`;
+              if (currentContextId.startsWith('folder:')) return `${t('folders.title', 'Carpeta')} • ${currentContextId.split('folder:')[1]}`;
               if (currentContextId.startsWith('playlist:')) {
                 const pId = currentContextId.split('playlist:')[1];
                 const p = playlists.find(pl => pl.id === pId);
-                return `la playlist • ${p ? p.name : 'Desconocida'}`;
+                return `${t('playlists.title', 'Playlist')} • ${p ? p.name : 'Unknown'}`;
               }
-              return 'tu música';
+              return t('sidebar.home', 'tu música');
             })()}
           </p>
         </div>
@@ -300,21 +302,21 @@ export default function PlayerScreen() {
                 }
               }}
               className="p-3 rounded-full transition-colors hover:bg-white/10"
-              title="Me gusta"
+              title={t('player.like', 'Me gusta')}
             >
               <Heart size={24} fill={currentSong && isFavorite(currentSong.id) ? colors.primary : 'none'} color={currentSong && isFavorite(currentSong.id) ? colors.primary : 'rgba(255,255,255,0.7)'} />
             </button>
             <button
               onClick={() => playNext()}
               className="p-3 rounded-full transition-colors hover:bg-white/10 text-white/70 hover:text-white"
-              title="No me gusta (Saltar)"
+              title={t('player.dislike', 'No me gusta (Saltar)')}
             >
               <ThumbsDown size={24} />
             </button>
             <button
               onClick={() => setIsAddToPlaylistOpen(true)}
               className="p-3 rounded-full transition-colors hover:bg-white/10 text-white/70 hover:text-white"
-              title="Añadir a playlist"
+              title={t('player.addToPlaylist', 'Añadir a playlist')}
             >
               <Plus size={24} />
             </button>

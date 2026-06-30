@@ -2,6 +2,7 @@ import { useState, type ReactElement } from 'react'
 import { Camera, X } from 'lucide-react'
 import { useAudio } from '../context/AudioContext'
 import { Playlist } from '../types'
+import { useTranslation } from 'react-i18next'
 
 interface PlaylistEditModalProps {
   isOpen: boolean
@@ -29,6 +30,7 @@ function PlaylistEditModalContent({
   onClose
 }: PlaylistEditModalContentProps): ReactElement {
   const { updatePlaylist } = useAudio()
+  const { t } = useTranslation()
   const [name, setName] = useState(playlist.name)
   const [description, setDescription] = useState(playlist.description || '')
   const [coverUri, setCoverUri] = useState<string | null>(playlist.cover || null)
@@ -66,7 +68,7 @@ function PlaylistEditModalContent({
           <X size={20} />
         </button>
 
-        <h2 className="text-2xl font-bold mb-6 text-white">Editar Playlist</h2>
+        <h2 className="text-2xl font-bold mb-6 text-white">{t('playlists.edit', 'Editar Playlist')}</h2>
 
         <div className="flex flex-col gap-4">
           <div className="flex justify-center mb-2">
@@ -76,7 +78,7 @@ function PlaylistEditModalContent({
             >
               {coverUri ? (
                 <>
-                  <img src={coverUri} alt="Vista previa" className="w-full h-full object-cover" />
+                  <img src={coverUri} alt={t('playlists.preview', 'Vista previa')} className="w-full h-full object-cover" />
                   <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                     <Camera size={24} className="text-white" />
                   </div>
@@ -84,7 +86,7 @@ function PlaylistEditModalContent({
               ) : (
                 <div className="text-center text-white/50 group-hover:text-white transition-colors">
                   <Camera size={28} className="mx-auto mb-2" />
-                  <span className="text-xs font-bold">Subir foto</span>
+                  <span className="text-xs font-bold">{t('detail.changeCover', 'Subir foto')}</span>
                 </div>
               )}
             </button>
@@ -92,7 +94,7 @@ function PlaylistEditModalContent({
 
           <div>
             <label className="block text-xs font-bold text-gray-400 mb-1 uppercase tracking-wider">
-              Nombre
+              {t('playlists.name', 'Nombre')}
             </label>
             <input
               type="text"
@@ -105,7 +107,7 @@ function PlaylistEditModalContent({
 
           <div>
             <label className="block text-xs font-bold text-gray-400 mb-1 uppercase tracking-wider">
-              Descripción
+              {t('playlists.description', 'Descripción (Opcional)')}
             </label>
             <textarea
               value={description}
@@ -119,7 +121,7 @@ function PlaylistEditModalContent({
             disabled={!name.trim()}
             className="mt-4 w-full bg-purple-600 hover:bg-purple-500 disabled:bg-white/10 disabled:text-white/30 text-white font-bold py-3 rounded-xl transition-all"
           >
-            Guardar cambios
+            {t('playlists.save', 'Guardar cambios')}
           </button>
         </div>
       </div>

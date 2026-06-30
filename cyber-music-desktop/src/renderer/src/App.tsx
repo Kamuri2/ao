@@ -8,6 +8,8 @@ import MiniPlayer from './components/MiniPlayer';
 import Sidebar from './components/Sidebar';
 import GlobalButtons from './components/GlobalButtons';
 import Mascot from './components/Mascot';
+import { useTranslation } from 'react-i18next';
+import enDict from './locales/en.json';
 
 import PlayerScreen from './screens/PlayerScreen';
 import SettingsScreen from './screens/SettingsScreen';
@@ -21,6 +23,31 @@ import ErrorBoundary from './components/ErrorBoundary';
 function AppContent() {
   const { isPlayerOpen, currentSong, toastMessage } = useAudio();
   const [renderPlayer, setRenderPlayer] = useState(isPlayerOpen);
+  const { i18n } = useTranslation();
+
+  // Load dynamic language cache on boot if needed
+  useEffect(() => {
+    const lang = i18n.language.split('-')[0];
+    if (lang !== 'en' && lang !== 'es' && !i18n.hasResourceBundle(lang, 'translation')) {
+      window.api.getTranslatedUI(lang).then(cached => {
+        if (cached) {
+          i18n.addResourceBundle(lang, 'translation', cached, true, true);
+          // Force i18next to re-evaluate now that the bundle is added
+          i18n.changeLanguage(lang);
+        } else {
+          // Fallback to English if cache is missing, but attempt to download it
+          window.api.translateUI(lang, enDict).then(downloaded => {
+            if (downloaded) {
+              i18n.addResourceBundle(lang, 'translation', downloaded, true, true);
+              i18n.changeLanguage(lang);
+            } else {
+              i18n.changeLanguage('en');
+            }
+          }).catch(() => i18n.changeLanguage('en'));
+        }
+      });
+    }
+  }, [i18n, i18n.language]);
 
   useEffect(() => {
     if (isPlayerOpen) {

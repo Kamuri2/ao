@@ -1,11 +1,13 @@
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Home, FolderOpen, Disc3, Mic2, ListMusic } from 'lucide-react';
+import { Home, FolderOpen, ListMusic, Disc3, Mic2 } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { useTheme } from '../context/ThemeContext';
 import cybeCatLogo from '../assets/CybeCat.png';
 
 export default function Sidebar() {
   const navigate = useNavigate();
   const location = useLocation();
+  const { t } = useTranslation();
   const { colors } = useTheme();
 
   // Ocultar en el reproductor
@@ -35,11 +37,11 @@ export default function Sidebar() {
       </div>
 
       <div className="flex flex-row md:flex-col w-full justify-around md:justify-start md:gap-2">
-        <NavItem to="/" icon={Home} label="Inicio" />
-        <NavItem to="/folders" icon={FolderOpen} label="Carpetas" />
-        <NavItem to="/playlists" icon={ListMusic} label="Playlist" />
-        <NavItem to="/albums" icon={Disc3} label="Albums" />
-        <NavItem to="/artists" icon={Mic2} label="Artistas" />
+        <NavItem to="/" icon={Home} label={t('sidebar.home', 'Inicio')} />
+        <NavItem to="/folders" icon={FolderOpen} label={t('sidebar.folders', 'Carpetas')} />
+        <NavItem to="/playlists" icon={ListMusic} label={t('sidebar.playlists', 'Playlist')} />
+        <NavItem to="/albums" icon={Disc3} label={t('sidebar.albums', 'Albums')} />
+        <NavItem to="/artists" icon={Mic2} label={t('sidebar.artists', 'Artistas')} />
       </div>
     </div>
   );

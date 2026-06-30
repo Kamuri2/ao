@@ -8,9 +8,11 @@ import { useDominantColor } from '../hooks/useDominantColor';
 import { Virtuoso } from 'react-virtuoso';
 import { motion } from 'framer-motion';
 import lutoImg from '../assets/luto.png';
+import { useTranslation } from 'react-i18next';
 
 const SongListItem = React.memo(({ item, isPlaying, onPress, index, hideCover, onRemove }: any) => {
   const { colors } = useTheme();
+  const { t } = useTranslation();
 
   return (
     <div
@@ -38,7 +40,7 @@ const SongListItem = React.memo(({ item, isPlaying, onPress, index, hideCover, o
           {item.title || item.filename.replace(/\.[^/.]+$/, "")}
         </span>
         <span className="text-sm font-medium truncate opacity-70" style={{ color: colors.text }}>
-          {item.artist || 'Desconocido'}
+          {item.artist || t('detail.unknown')}
         </span>
       </div>
       {item.duration > 0 && (
@@ -63,6 +65,7 @@ export default function ListDetailScreen() {
   const navigate = useNavigate();
   const { albums, folders, artists, playlists, songs, playSound, playWithShuffle, currentSong, removeSongFromPlaylist, updatePlaylistCover } = useAudio();
   const { colors } = useTheme();
+  const { t } = useTranslation();
 
   let dataList: any = null;
   let title = '';
@@ -199,7 +202,7 @@ export default function ListDetailScreen() {
     if (folderData) {
       dataList = folderData.songs;
       title = folderData.name;
-      subtitle = 'Carpeta';
+      subtitle = t('detail.folder');
       cover = folderData.cover;
       audioPath = dataList[0]?.path;
     }
@@ -213,7 +216,7 @@ export default function ListDetailScreen() {
     if (artistData) {
       dataList = artistData.songs;
       title = artistData.name;
-      subtitle = `${dataList.length} pistas`;
+      subtitle = `${dataList.length} ${t('detail.tracks', 'pistas')}`;
       cover = artistData.cover;
       audioPath = undefined;
     }
@@ -222,8 +225,8 @@ export default function ListDetailScreen() {
     if (playlist) {
       // Mapear los IDs a canciones reales
       dataList = playlist.songIds.map(sId => songs.find(s => s.id === sId)).filter(Boolean);
-      title = playlist.name;
-      subtitle = playlist.description || 'Lista de Reproducción';
+      title = playlist.id === 'favorites' ? t('playlists.favorites', 'Me Gusta') : playlist.name;
+      subtitle = playlist.description || t('detail.playlist', 'Playlist');
       cover = playlist.cover || null;
       audioPath = dataList[0]?.path;
     }
@@ -253,8 +256,8 @@ export default function ListDetailScreen() {
   if (!dataList) {
     return (
       <div className="flex-1 flex flex-col items-center justify-center h-full w-full">
-        <p className="text-xl font-bold mb-4" style={{ color: colors.text }}>No se encontró el elemento.</p>
-        <button onClick={() => navigate(-1)} className="px-6 py-2 rounded-full font-bold" style={{ backgroundColor: colors.primary, color: '#000' }}>Volver</button>
+        <p className="text-xl font-bold mb-4" style={{ color: colors.text }}>{t('detail.notFound')}</p>
+        <button onClick={() => navigate(-1)} className="px-6 py-2 rounded-full font-bold" style={{ backgroundColor: colors.primary, color: '#000' }}>{t('detail.back')}</button>
       </div>
     );
   }
@@ -348,7 +351,7 @@ export default function ListDetailScreen() {
         {/* Text Details */}
         <div className="mt-6 md:mt-0 md:ml-8 flex flex-col z-10 flex-1 justify-end h-full w-full">
           <span className="text-sm font-bold uppercase tracking-widest mb-2" style={{ color: colors.text }}>
-            {type === 'album' ? 'Álbum' : type === 'folder' ? 'Carpeta' : type === 'playlist' ? 'Playlist' : 'Artista'}
+            {type === 'album' ? t('detail.album') : type === 'folder' ? t('detail.folder') : type === 'playlist' ? t('detail.playlist') : t('detail.artist')}
           </span>
           <h1 
             className={`font-black text-wrap mb-6 tracking-tighter line-clamp-3 ${
@@ -370,12 +373,12 @@ export default function ListDetailScreen() {
                 {subtitle}
               </span>
             ) : type === 'artist' ? (
-              <span>{artistAlbums.length} {artistAlbums.length === 1 ? 'album' : 'albums'}</span>
+              <span>{artistAlbums.length} {artistAlbums.length === 1 ? t('detail.album') : t('detail.albums')}</span>
             ) : (
               <span>{subtitle}</span>
             )}
             <span className="opacity-50">•</span>
-            <span>{dataList.length} canciones</span>
+            <span>{dataList.length} {t('detail.songs')}</span>
             {totalDuration > 0 && (
               <>
                 <span className="opacity-50">•</span>
@@ -395,7 +398,7 @@ export default function ListDetailScreen() {
               {/* Mobile bio (hidden on large screens) */}
               {artistDetails?.bio && (
                 <div className="lg:hidden bg-black/10 dark:bg-white/5 p-4 rounded-xl border border-black/5 dark:border-white/5 mb-4 cursor-pointer" onClick={() => setIsAboutArtistOpen(true)}>
-                  <h3 className="font-bold text-sm uppercase tracking-wider mb-2 opacity-70" style={{ color: colors.text }}>Acerca de</h3>
+                  <h3 className="font-bold text-sm uppercase tracking-wider mb-2 opacity-70" style={{ color: colors.text }}>{t('detail.about')}</h3>
                   <p className="text-sm opacity-90 leading-relaxed line-clamp-3" style={{ color: colors.text }}>
                     {artistDetails.bio}
                   </p>
@@ -428,7 +431,7 @@ export default function ListDetailScreen() {
                     className="flex items-center gap-2 px-4 py-2 rounded-full border border-white/20 hover:bg-white/10 transition-colors text-sm font-bold ml-auto"
                     style={{ color: colors.text }}
                   >
-                    Acerca del Artista
+                    {t('detail.aboutArtist')}
                   </button>
                 )}
               </div>
@@ -462,7 +465,7 @@ export default function ListDetailScreen() {
       {/* Artist Albums */}
       {type === 'artist' && artistAlbums.length > 0 && (
         <div className="px-8 mb-8 mt-2">
-          <h2 className="text-2xl font-bold mb-4 uppercase tracking-widest opacity-90" style={{ color: colors.text }}>Discografía</h2>
+          <h2 className="text-2xl font-bold mb-4 uppercase tracking-widest opacity-90" style={{ color: colors.text }}>{t('detail.discography')}</h2>
           <div
             className="flex overflow-x-auto gap-4 pb-4 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]"
             onWheel={(e) => {
@@ -490,7 +493,7 @@ export default function ListDetailScreen() {
                   </div>
                 </div>
                 <span className="font-bold text-sm truncate" style={{ color: colors.text }}>{album.name}</span>
-                <span className="text-xs opacity-70 truncate mt-0.5" style={{ color: colors.text }}>{album.year || `${album.songs.length} pistas`}</span>
+                <span className="text-xs opacity-70 truncate mt-0.5" style={{ color: colors.text }}>{album.year || `${album.songs.length} ${t('detail.tracks')}`}</span>
               </div>
             ))}
           </div>
@@ -502,11 +505,11 @@ export default function ListDetailScreen() {
         {displayList.length > 0 && (
           <div className="px-8 mb-4 mt-2">
             {type === 'artist' && (
-              <h2 className="text-2xl font-bold mb-6" style={{ color: colors.text }}>Todas las canciones</h2>
+              <h2 className="text-2xl font-bold mb-6" style={{ color: colors.text }}>{t('detail.allSongs')}</h2>
             )}
             <div className="flex flex-row items-center px-3 py-2 border-b border-white/10 text-sm font-bold opacity-70" style={{ color: colors.text }}>
               <div className="w-10 text-center">#</div>
-              <div className="flex-1 ml-4">Título</div>
+              <div className="flex-1 ml-4">{t('detail.title')}</div>
               <div className="mr-4"><Clock size={16} /></div>
             </div>
           </div>
@@ -575,7 +578,7 @@ export default function ListDetailScreen() {
                     {artistDetails.followers.toLocaleString()}
                   </div>
                   <div className="text-sm font-bold uppercase tracking-widest opacity-70 mt-2" style={{ color: colors.text }}>
-                    Seguidores
+                    {t('detail.followers')}
                   </div>
                 </div>
               )}
@@ -585,7 +588,7 @@ export default function ListDetailScreen() {
                     {Math.floor(artistDetails.followers * 3.14).toLocaleString()}
                   </div>
                   <div className="text-sm font-bold uppercase tracking-widest opacity-70 mt-2" style={{ color: colors.text }}>
-                    Oyentes mensuales
+                    {t('detail.monthlyListeners')}
                   </div>
                 </div>
               )}
@@ -595,7 +598,7 @@ export default function ListDetailScreen() {
                     {artistDetails.origin}
                   </div>
                   <div className="text-sm font-bold uppercase tracking-widest opacity-70 mt-2" style={{ color: colors.text }}>
-                    Origen
+                    {t('detail.origin')}
                   </div>
                 </div>
               )}

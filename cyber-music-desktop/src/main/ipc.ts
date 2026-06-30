@@ -13,6 +13,7 @@ import ffmpeg from 'fluent-ffmpeg';
 import ffmpegStatic from 'ffmpeg-static';
 import ffprobeStatic from 'ffprobe-static';
 import { app } from 'electron';
+import { translate } from '@vitalets/google-translate-api';
 
 // Set up ffmpeg paths
 const ffmpegPath = app.isPackaged ? path.join(process.resourcesPath, 'app.asar.unpacked', 'node_modules', 'ffmpeg-static', 'ffmpeg.exe') : ffmpegStatic;
@@ -552,6 +553,154 @@ export function setupIpc() {
     cache[normalizedName] = null;
     await fs.writeFile(cachePath, JSON.stringify(cache, null, 2), 'utf8');
     return null;
+  });
+
+  ipcMain.handle('api:translateLyrics', async (_, songId: string, lines: string[], targetLang: string = 'es') => {
+    if (!songId || !lines || lines.length === 0) return [];
+    
+    const translationsDir = path.join(app.getPath('userData'), 'lyrics_translations');
+    try {
+      if (!existsSync(translationsDir)) {
+        await fs.mkdir(translationsDir, { recursive: true });
+      }
+    } catch(e) {}
+
+    const cacheFile = path.join(translationsDir, `${songId}_${targetLang}.json`);
+    
+    // Check cache
+    try {
+      if (existsSync(cacheFile)) {
+        const data = await fs.readFile(cacheFile, 'utf8');
+        return JSON.parse(data);
+      }
+    } catch(e) {}
+
+    // Translate
+    try {
+      const fullText = lines.join('\n');
+      const res = await translate(fullText, { to: targetLang });
+      
+      let translatedLines = res.text.split('\n');
+      
+      // If detected language is the same as the target language OR the translation is exactly the same text
+      const isSameLanguage = (res as any).from?.language?.iso?.toLowerCase() === targetLang.toLowerCase() || (res as any).raw?.src?.toLowerCase() === targetLang.toLowerCase();
+      const isSameText = fullText.replace(/\s+/g, '').toLowerCase() === res.text.replace(/\s+/g, '').toLowerCase();
+
+      if (isSameLanguage || isSameText) {
+        translatedLines = [];
+      }
+      
+      // Cache it
+      await fs.writeFile(cacheFile, JSON.stringify(translatedLines), 'utf8');
+      
+      return translatedLines;
+    } catch (e) {
+      console.error('Translation error', e);
+      return [];
+    }
+  });
+
+  // Dynamic UI Translation
+  ipcMain.handle('api:getTranslatedUI', async (_, langCode: string) => {
+    const translationsDir = path.join(app.getPath('userData'), 'ui_translations');
+    const cacheFile = path.join(translationsDir, `${langCode}.json`);
+    try {
+      if (existsSync(cacheFile)) {
+        const data = await fs.readFile(cacheFile, 'utf8');
+        return JSON.parse(data);
+      }
+    } catch (e) {}
+    return null;
+  });
+
+  ipcMain.handle('api:translateUI', async (_, langCode: string, baseDictionary: Record<string, any>) => {
+    const translationsDir = path.join(app.getPath('userData'), 'ui_translations');
+    try {
+      if (!existsSync(translationsDir)) {
+        await fs.mkdir(translationsDir, { recursive: true });
+      }
+    } catch (e) {}
+
+    const cacheFile = path.join(translationsDir, `${langCode}.json`);
+    
+    // Flatten dictionary
+    const flattenObj = (ob: any): Record<string, string> => {
+      let result: Record<string, string> = {};
+      for (const i in ob) {
+        if ((typeof ob[i]) === 'object' && !Array.isArray(ob[i])) {
+          const temp = flattenObj(ob[i]);
+          for (const j in temp) {
+            result[i + '.' + j] = temp[j];
+          }
+        } else {
+          result[i] = ob[i];
+        }
+      }
+      return result;
+    };
+
+    const unflattenObj = (ob: Record<string, string>): any => {
+      let result: any = {};
+      for (const i in ob) {
+        const keys = i.split('.');
+        keys.reduce((acc, key, index) => {
+          if (index === keys.length - 1) {
+            acc[key] = ob[i];
+          } else {
+            acc[key] = acc[key] || {};
+          }
+          return acc[key];
+        }, result);
+      }
+      return result;
+    };
+
+    const flatDict = flattenObj(baseDictionary);
+    const keys = Object.keys(flatDict);
+    let valuesToTranslate: string[] = [];
+    let keysToTranslate: string[] = [];
+    let existingFlatDict: Record<string, string> = {};
+
+    try {
+      if (existsSync(cacheFile)) {
+        const data = await fs.readFile(cacheFile, 'utf8');
+        const parsed = JSON.parse(data);
+        existingFlatDict = flattenObj(parsed);
+      }
+    } catch (e) {}
+
+    keys.forEach(k => {
+      if (!(k in existingFlatDict)) {
+        keysToTranslate.push(k);
+        valuesToTranslate.push(flatDict[k]);
+      }
+    });
+
+    if (keysToTranslate.length === 0) {
+      return unflattenObj(existingFlatDict);
+    }
+
+    try {
+      // Join values with a special delimiter (like \n)
+      const fullText = valuesToTranslate.join('\n');
+      const res = await translate(fullText, { to: langCode });
+      const translatedValues = res.text.split('\n');
+
+      // Reconstruct
+      keysToTranslate.forEach((k, idx) => {
+        existingFlatDict[k] = translatedValues[idx] ? translatedValues[idx].trim() : valuesToTranslate[idx];
+      });
+
+      const translatedDict = unflattenObj(existingFlatDict);
+
+      // Cache
+      await fs.writeFile(cacheFile, JSON.stringify(translatedDict, null, 2), 'utf8');
+      
+      return translatedDict;
+    } catch (e) {
+      console.error('UI Translation error', e);
+      return unflattenObj(existingFlatDict);
+    }
   });
 }
 

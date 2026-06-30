@@ -2,17 +2,20 @@ import { useAudio } from '../context/AudioContext';
 import { useTheme } from '../context/ThemeContext';
 import CoverImage from '../components/CoverImage';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 // @ts-ignore
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 
 export default function AlbumsScreen() {
   const { albums } = useAudio();
   const { colors } = useTheme();
   const navigate = useNavigate();
+  const { t } = useTranslation();
+  const [searchQuery, setSearchQuery] = useState('');
 
   const sortedAlbums = useMemo(() => {
-    return Object.values(albums).sort((a: any, b: any) => a.name.localeCompare(b.name));
-  }, [albums]);
+    return Object.values(albums).filter(a => a.name.toLowerCase().includes(searchQuery.toLowerCase())).sort((a: any, b: any) => a.name.localeCompare(b.name));
+  }, [albums, searchQuery]);
 
   const existingLetters = useMemo(() => {
     const letters = new Set<string>();
@@ -52,7 +55,18 @@ export default function AlbumsScreen() {
 
   return (
     <div className="flex-1 px-8 py-8 max-w-full w-full animate-fade-in relative">
-      <h1 className="text-4xl font-black uppercase tracking-widest mb-8" style={{ color: colors.text }}>Albums</h1>
+      <h1 className="text-4xl font-black uppercase tracking-widest mb-8" style={{ color: colors.text }}>{t('albums.title')}</h1>
+      
+      <div className="mb-8">
+        <input 
+          type="text" 
+          placeholder={t('albums.search')}
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          className="w-full p-4 rounded-xl bg-black/5 dark:bg-white/5 outline-none transition-all focus:ring-2"
+          style={{ color: colors.text }}
+        />
+      </div>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 w-full pb-32 pr-12">
         {sortedAlbums.map((album: any) => {
@@ -78,7 +92,7 @@ export default function AlbumsScreen() {
                 />
               </div>
               <h2 className="text-center font-bold text-sm truncate w-full" style={{ color: colors.text }}>{album.name}</h2>
-              <p className="text-center text-xs opacity-70 truncate w-full" style={{ color: colors.subText }}>{album.artist} • {album.songs.length} pistas</p>
+              <p className="text-center text-xs opacity-70 truncate w-full" style={{ color: colors.subText }}>{album.artist} • {album.songs.length} {t('detail.tracks', 'pistas')}</p>
             </div>
           );
         })}

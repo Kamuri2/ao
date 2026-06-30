@@ -4,6 +4,8 @@ import { ArrowLeft, FolderOpen, Trash2, RefreshCw } from 'lucide-react';
 import { useTheme, baseThemes, ParticleType } from '../context/ThemeContext';
 import { useAudio } from '../context/AudioContext';
 import { Image as ImageIcon } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
+import enDict from '../locales/en.json';
 
 const popularFonts = [
   "Inter", "Roboto", "Outfit", "Space Grotesk", "Syne", 
@@ -14,11 +16,14 @@ const popularFonts = [
 
 export default function SettingsScreen() {
   const navigate = useNavigate();
-  const { colors, isDarkMode, toggleTheme, themeFamily, setThemeFamily, particles, setParticles, customFont, setCustomFont, mascots, addMascot, removeMascot, lyricsFontSize, setLyricsFontSize } = useTheme();
+  const { t, i18n } = useTranslation();
+  const { colors, isDarkMode, toggleTheme, themeFamily, setThemeFamily, particles, setParticles, customFont, setCustomFont, mascots, addMascot, removeMascot, lyricsFontSize, setLyricsFontSize, showTranslatedLyrics, setShowTranslatedLyrics, lyricsLanguage, setLyricsLanguage } = useTheme();
   const { loadSongsFromUri, songs, isScanning, isCrossfadeEnabled, setIsCrossfadeEnabled, crossfadeDuration, setCrossfadeDuration } = useAudio();
   const currentFolder = localStorage.getItem('@music_folder');
 
   const [draftFont, setDraftFont] = useState(customFont);
+  const [isTranslatingUI, setIsTranslatingUI] = useState(false);
+  const [languageMode, setLanguageMode] = useState(localStorage.getItem('app_language_mode') || 'system');
 
   useEffect(() => {
     setDraftFont(customFont);
@@ -27,6 +32,43 @@ export default function SettingsScreen() {
   const handleClearFolder = () => {
     localStorage.removeItem('@music_folder');
     window.location.reload();
+  };
+
+  const handleLanguageChange = async (langCode: string) => {
+    setLanguageMode(langCode);
+    
+    let targetLang = langCode;
+    if (langCode === 'system') {
+      localStorage.setItem('app_language_mode', 'system');
+      localStorage.removeItem('i18nextLng');
+      targetLang = navigator.language.split('-')[0];
+    } else {
+      localStorage.setItem('app_language_mode', 'manual');
+    }
+
+    if (targetLang === 'en' || targetLang === 'es') {
+      i18n.changeLanguage(targetLang);
+      return;
+    }
+
+    // Dynamic Translation
+    setIsTranslatingUI(true);
+    try {
+      const translatedDict = await window.api.translateUI(langCode, enDict);
+      if (translatedDict) {
+        i18n.addResourceBundle(langCode, 'translation', translatedDict, true, true);
+        i18n.changeLanguage(langCode);
+      } else {
+        alert('Error downloading language pack. Please check your internet connection.');
+        // Revert to English
+        i18n.changeLanguage('en');
+      }
+    } catch (e) {
+      console.error(e);
+      i18n.changeLanguage('en');
+    } finally {
+      setIsTranslatingUI(false);
+    }
   };
 
   return (
@@ -39,25 +81,25 @@ export default function SettingsScreen() {
           <ArrowLeft size={28} color={colors.text} />
         </button>
         <h1 className="text-3xl font-black" style={{ color: colors.text }}>
-          Configuración
+          {t('settings.title')}
         </h1>
       </div>
 
       <div className="space-y-6">
         <div className="p-6 rounded-2xl border border-white/10 shadow-sm" style={{ backgroundColor: isDarkMode ? '#1e1e1e' : '#ffffff' }}>
-          <h2 className="text-xl font-bold mb-4" style={{ color: colors.text }}>Apariencia y Temas</h2>
+          <h2 className="text-xl font-bold mb-4" style={{ color: colors.text }}>{t('settings.appearance')}</h2>
           <div className="flex flex-row items-center justify-between mb-6">
-            <span className="font-medium" style={{ color: colors.subText }}>Modo Oscuro</span>
+            <span className="font-medium" style={{ color: colors.subText }}>{t('settings.darkMode')}</span>
             <button
               className="px-4 py-2 rounded-lg font-bold transition-transform active:scale-95"
               style={{ backgroundColor: colors.primary, color: '#000' }}
               onClick={toggleTheme}
             >
-              {isDarkMode ? 'Activo' : 'Inactivo'}
+              {isDarkMode ? t('settings.active') : t('settings.inactive')}
             </button>
           </div>
 
-          <span className="font-medium mb-3 block" style={{ color: colors.subText }}>Tema Global</span>
+          <span className="font-medium mb-3 block" style={{ color: colors.subText }}>{t('settings.globalTheme')}</span>
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 mb-6">
             {baseThemes.map(theme => (
               <button
@@ -70,12 +112,12 @@ export default function SettingsScreen() {
                   color: themeFamily === theme.id ? '#000' : colors.text
                 }}
               >
-                {theme.name}
+                {t(`themes.${theme.id}`, theme.name)}
               </button>
             ))}
           </div>
 
-          <span className="font-medium mb-3 block" style={{ color: colors.subText }}>Efectos de Partículas</span>
+          <span className="font-medium mb-3 block" style={{ color: colors.subText }}>{t('settings.particles')}</span>
           <div className="flex flex-row gap-3 flex-wrap">
             {(['none', 'snow', 'bubbles', 'stars'] as ParticleType[]).map(pType => (
               <button
@@ -88,12 +130,12 @@ export default function SettingsScreen() {
                   color: particles === pType ? '#000' : colors.text
                 }}
               >
-                {pType === 'none' ? 'Ninguno' : pType === 'snow' ? 'Nieve' : pType === 'bubbles' ? 'Burbujas' : 'Estrellas'}
+                {pType === 'none' ? t('settings.particlesNone') : pType === 'snow' ? t('settings.particlesSnow') : pType === 'bubbles' ? t('settings.particlesBubbles') : t('settings.particlesStars')}
               </button>
             ))}
           </div>
 
-          <span className="font-medium mb-3 block mt-6" style={{ color: colors.subText }}>Tipografía (Google Fonts)</span>
+          <span className="font-medium mb-3 block mt-6" style={{ color: colors.subText }}>{t('settings.fonts')}</span>
           <div className="flex flex-col gap-3">
             <div className="flex flex-row gap-3">
               <select 
@@ -106,12 +148,12 @@ export default function SettingsScreen() {
                 className="flex-1 px-4 py-3 rounded-lg border bg-transparent font-bold appearance-none cursor-pointer outline-none"
                 style={{ borderColor: colors.border, color: colors.text }}
               >
-                <option value="" style={{ color: '#000' }}>Fuente del Sistema (Predeterminada)</option>
+                <option value="" style={{ color: '#000' }}>{t('settings.systemFont')}</option>
                 {popularFonts.map(font => (
                   <option key={font} value={font} style={{ color: '#000', fontFamily: `"${font}", sans-serif` }}>{font}</option>
                 ))}
                 {!popularFonts.includes(draftFont) && draftFont !== '' && (
-                  <option value="custom" style={{ color: '#000' }}>Personalizada ({draftFont})</option>
+                  <option value="custom" style={{ color: '#000' }}>{t('settings.customFont')} ({draftFont})</option>
                 )}
               </select>
               <button
@@ -119,14 +161,14 @@ export default function SettingsScreen() {
                 className="px-4 py-3 rounded-lg border font-bold transition-transform active:scale-95 bg-red-500/10 text-red-500 hover:bg-red-500/20"
                 style={{ borderColor: colors.border }}
               >
-                Restablecer
+                {t('settings.reset')}
               </button>
             </div>
             
             <div className="flex flex-row gap-3">
               <input 
                 type="text" 
-                placeholder="O escribe otra (ej. Roboto Mono)..." 
+                placeholder={t('settings.fontPlaceholder')}
                 value={draftFont}
                 onChange={(e) => setDraftFont(e.target.value)}
                 className="flex-1 px-4 py-3 rounded-lg border bg-transparent font-bold outline-none focus:border-white/30"
@@ -137,18 +179,18 @@ export default function SettingsScreen() {
                 className="px-6 py-3 rounded-lg font-bold transition-transform active:scale-95"
                 style={{ backgroundColor: colors.primary, color: '#000' }}
               >
-                Aplicar
+                {t('settings.apply')}
               </button>
             </div>
           </div>
-          <p className="text-xs opacity-70 mt-2" style={{ color: colors.subText }}>Elige una fuente rápida o escribe su nombre y pulsa Aplicar para descargarla.</p>
+          <p className="text-xs opacity-70 mt-1" style={{ color: colors.subText }}>{t('settings.fontHelper')}</p>
           
-          <span className="font-medium mb-3 block mt-8" style={{ color: colors.subText }}>Tamaño de Letras de Canciones</span>
+          <span className="font-medium mb-3 block mt-8" style={{ color: colors.subText }}>{t('settings.lyricsSize')}</span>
           <div className="flex flex-col gap-2">
             <div className="flex flex-row items-center justify-between">
-              <span className="text-sm opacity-70" style={{ color: colors.subText }}>Más pequeño</span>
+              <span className="text-sm opacity-70" style={{ color: colors.subText }}>{t('settings.smaller')}</span>
               <span className="font-bold" style={{ color: colors.text }}>{lyricsFontSize}%</span>
-              <span className="text-sm opacity-70" style={{ color: colors.subText }}>Más grande</span>
+              <span className="text-sm opacity-70" style={{ color: colors.subText }}>{t('settings.larger')}</span>
             </div>
             <input 
               type="range" 
@@ -160,17 +202,59 @@ export default function SettingsScreen() {
               className="w-full h-2 rounded-lg appearance-none cursor-pointer bg-white/10 mt-1"
               style={{ accentColor: colors.primary }}
             />
-            <p className="text-xs opacity-70 mt-1" style={{ color: colors.subText }}>Ajusta el tamaño para que las letras largas quepan en una sola línea sin saltos.</p>
+            <p className="text-xs opacity-70 mt-1" style={{ color: colors.subText }}>{t('settings.lyricsHelper')}</p>
+          </div>
+
+          <span className="font-medium mb-3 block mt-8" style={{ color: colors.subText }}>{t('settings.translation')}</span>
+          <div className="flex flex-col gap-4">
+            <div className="flex flex-row items-center justify-between">
+              <div className="flex flex-col">
+                <span className="font-medium" style={{ color: colors.text }}>{t('settings.translationDesc1')}</span>
+                <span className="text-xs opacity-70" style={{ color: colors.subText }}>{t('settings.translationDesc2')}</span>
+              </div>
+              <button
+                className="px-4 py-2 rounded-lg font-bold transition-transform active:scale-95"
+                style={{ backgroundColor: colors.primary, color: '#000' }}
+                onClick={() => setShowTranslatedLyrics(!showTranslatedLyrics)}
+              >
+                {showTranslatedLyrics ? t('settings.active') : t('settings.inactive')}
+              </button>
+            </div>
+
+            {showTranslatedLyrics && (
+              <div className="flex flex-col gap-2 mt-2 pt-4 border-t border-white/10">
+                <span className="text-sm font-medium" style={{ color: colors.text }}>{t('settings.translationLanguage')}</span>
+                <select 
+                  value={lyricsLanguage}
+                  onChange={(e) => setLyricsLanguage(e.target.value)}
+                  className="w-full px-4 py-2 rounded-lg border bg-transparent font-bold appearance-none cursor-pointer outline-none text-sm"
+                  style={{ borderColor: colors.border, color: colors.text }}
+                >
+                  <option value="es" style={{ color: '#000' }}>Español</option>
+                  <option value="en" style={{ color: '#000' }}>English</option>
+                  <option value="fr" style={{ color: '#000' }}>Français</option>
+                  <option value="de" style={{ color: '#000' }}>Deutsch</option>
+                  <option value="it" style={{ color: '#000' }}>Italiano</option>
+                  <option value="pt" style={{ color: '#000' }}>Português</option>
+                  <option value="ru" style={{ color: '#000' }}>Русский</option>
+                  <option value="ja" style={{ color: '#000' }}>日本語</option>
+                  <option value="ko" style={{ color: '#000' }}>한국어</option>
+                  <option value="zh-CN" style={{ color: '#000' }}>中文 (Simplified)</option>
+                  <option value="ar" style={{ color: '#000' }}>العربية</option>
+                  <option value="hi" style={{ color: '#000' }}>हिन्दी</option>
+                </select>
+              </div>
+            )}
           </div>
         </div>
 
         <div className="p-6 rounded-2xl border border-white/10 shadow-sm" style={{ backgroundColor: isDarkMode ? '#1e1e1e' : '#ffffff' }}>
-          <h2 className="text-xl font-bold mb-4" style={{ color: colors.text }}>Mascota Virtual</h2>
+          <h2 className="text-xl font-bold mb-4" style={{ color: colors.text }}>{t('settings.mascot')}</h2>
           <div className="flex flex-col gap-4">
             <div className="flex flex-row items-center justify-between">
               <div>
-                <span className="font-medium block" style={{ color: colors.text }}>Mascotas Flotantes (Max 3)</span>
-                <span className="text-sm opacity-70" style={{ color: colors.subText }}>Sube GIFs o PNGs con fondo transparente.</span>
+                <span className="font-medium" style={{ color: colors.subText }}>{t('settings.mascotDesc')}</span>
+                <p className="text-xs opacity-70 mt-1" style={{ color: colors.subText }}>{t('settings.mascotHelper')}</p>
               </div>
               <button
                 className="flex items-center gap-2 px-4 py-3 rounded-lg font-bold transition-transform active:scale-95 disabled:opacity-50 disabled:scale-100"
@@ -186,7 +270,7 @@ export default function SettingsScreen() {
                 }}
               >
                 <ImageIcon size={20} />
-                Importar
+                {t('settings.import')}
               </button>
             </div>
             
@@ -195,34 +279,34 @@ export default function SettingsScreen() {
                 <div key={m.id} className="flex flex-row justify-between items-center bg-black/5 dark:bg-white/5 p-4 rounded-lg">
                   <div className="flex items-center gap-4">
                     <img src={m.url} className="w-12 h-12 object-contain" alt="Mascot" />
-                    <span className="font-bold text-sm" style={{ color: colors.text }}>Mascota {index + 1}</span>
+                    <span className="font-bold text-sm" style={{ color: colors.text }}>{t('settings.mascot')} {index + 1}</span>
                   </div>
                   <button
                     onClick={() => removeMascot(m.id)}
                     className="px-4 py-2 rounded-lg bg-red-500/10 text-red-500 hover:bg-red-500/20 font-bold transition-colors"
                   >
-                    Eliminar
+                    {t('settings.delete')}
                   </button>
                 </div>
               ))}
               {mascots.length === 0 && (
-                <p className="text-sm text-center py-4 opacity-50" style={{ color: colors.text }}>No hay mascotas importadas.</p>
+                <p className="text-sm font-bold opacity-50 my-4" style={{ color: colors.text }}>{t('settings.noMascots')}</p>
               )}
             </div>
           </div>
         </div>
 
         <div className="p-6 rounded-2xl border border-white/10 shadow-sm" style={{ backgroundColor: isDarkMode ? '#1e1e1e' : '#ffffff' }}>
-          <h2 className="text-xl font-bold mb-4" style={{ color: colors.text }}>Librería de Música</h2>
+          <h2 className="text-xl font-bold mb-4" style={{ color: colors.text }}>{t('settings.library')}</h2>
 
           {currentFolder ? (
             <div className="mb-4 p-3 rounded-lg bg-black/5 dark:bg-white/5 break-all">
-              <span className="text-sm font-bold opacity-70 block mb-1">Carpeta actual:</span>
+              <span className="text-sm font-bold opacity-70 block mb-1">{t('settings.currentFolder')}</span>
               <span className="text-sm font-medium" style={{ color: colors.text }}>{currentFolder}</span>
             </div>
           ) : (
             <p className="text-sm mb-4" style={{ color: colors.subText }}>
-              No has seleccionado una carpeta. Selecciona una para cargar tu música.
+              {t('settings.noFolder')}
             </p>
           )}
 
@@ -235,7 +319,7 @@ export default function SettingsScreen() {
                 disabled={isScanning}
               >
                 <FolderOpen size={20} />
-                Seleccionar Carpeta
+                {t('settings.selectFolder', 'Seleccionar Carpeta')}
               </button>
 
               {currentFolder && (
@@ -246,7 +330,7 @@ export default function SettingsScreen() {
                   disabled={isScanning}
                 >
                   <RefreshCw size={20} className={isScanning ? 'animate-spin' : ''} />
-                  {isScanning ? 'Escaneando...' : 'Escanear (Reparar)'}
+                  {isScanning ? t('settings.scanning') : t('settings.scan')}
                 </button>
               )}
             </div>
@@ -258,19 +342,19 @@ export default function SettingsScreen() {
                 disabled={isScanning}
               >
                 <Trash2 size={20} />
-                Eliminar Carpeta
+                {t('settings.deleteFolder', 'Eliminar Carpeta')}
               </button>
             )}
           </div>
         </div>
 
         <div className="p-6 rounded-2xl border border-white/10 shadow-sm" style={{ backgroundColor: isDarkMode ? '#1e1e1e' : '#ffffff' }}>
-          <h2 className="text-xl font-bold mb-4" style={{ color: colors.text }}>Reproducción</h2>
+          <h2 className="text-xl font-bold mb-4" style={{ color: colors.text }}>{t('settings.playback', 'Reproducción')}</h2>
 
           <div className="flex flex-row items-center justify-between">
             <div>
-              <span className="font-medium block" style={{ color: colors.text }}>Crossfade</span>
-              <span className="text-sm opacity-70" style={{ color: colors.subText }}>Desvanece la pista actual y comienza la siguiente sin cortes.</span>
+              <span className="font-medium block" style={{ color: colors.text }}>{t('settings.crossfade', 'Crossfade')}</span>
+              <span className="text-sm opacity-70" style={{ color: colors.subText }}>{t('settings.crossfadeDesc', 'Desvanece la pista actual y comienza la siguiente sin cortes.')}</span>
             </div>
 
             <button
@@ -285,7 +369,7 @@ export default function SettingsScreen() {
           {isCrossfadeEnabled && (
             <div className="mt-6 pt-6 border-t border-white/10">
               <div className="flex flex-row items-center justify-between mb-2">
-                <span className="font-medium" style={{ color: colors.text }}>Duración del Crossfade</span>
+                <span className="font-medium" style={{ color: colors.text }}>{t('settings.crossfadeDuration', 'Duración del Crossfade')}</span>
                 <span className="font-bold" style={{ color: colors.primary }}>{crossfadeDuration} s</span>
               </div>
               <input
@@ -306,11 +390,45 @@ export default function SettingsScreen() {
           )}
         </div>
 
+        {/* Language Section */}
         <div className="p-6 rounded-2xl border border-white/10 shadow-sm" style={{ backgroundColor: isDarkMode ? '#1e1e1e' : '#ffffff' }}>
-          <h2 className="text-xl font-bold mb-4" style={{ color: colors.text }}>Acerca de</h2>
+          <h2 className="text-xl font-bold mb-4 flex items-center gap-2" style={{ color: colors.text }}>
+            {t('settings.language')}
+            {isTranslatingUI && <RefreshCw size={16} className="animate-spin text-primary" />}
+          </h2>
+          <div className="flex flex-col gap-2">
+            <select 
+              value={languageMode === 'system' ? 'system' : i18n.language.split('-')[0]}
+              onChange={(e) => handleLanguageChange(e.target.value)}
+              disabled={isTranslatingUI}
+              className="w-full px-4 py-3 rounded-lg border bg-transparent font-bold appearance-none cursor-pointer outline-none disabled:opacity-50"
+              style={{ borderColor: colors.border, color: colors.text }}
+            >
+              <option value="system" style={{ color: '#000' }}>{t('settings.systemDefault', 'Predeterminado del sistema')}</option>
+              <option value="en" style={{ color: '#000' }}>English</option>
+              <option value="es" style={{ color: '#000' }}>Español</option>
+              <option value="fr" style={{ color: '#000' }}>Français</option>
+              <option value="de" style={{ color: '#000' }}>Deutsch</option>
+              <option value="it" style={{ color: '#000' }}>Italiano</option>
+              <option value="pt" style={{ color: '#000' }}>Português</option>
+              <option value="ru" style={{ color: '#000' }}>Русский</option>
+              <option value="ja" style={{ color: '#000' }}>日本語</option>
+              <option value="ko" style={{ color: '#000' }}>한국어</option>
+              <option value="zh-CN" style={{ color: '#000' }}>中文 (Simplified)</option>
+              <option value="ar" style={{ color: '#000' }}>العربية</option>
+              <option value="hi" style={{ color: '#000' }}>हिन्दी</option>
+            </select>
+            <p className="text-xs opacity-70 mt-1" style={{ color: colors.subText }}>
+              {isTranslatingUI ? 'Descargando paquete de idioma (Tardará unos segundos)...' : t('settings.languageHelper')}
+            </p>
+          </div>
+        </div>
+
+        <div className="p-6 rounded-2xl border border-white/10 shadow-sm" style={{ backgroundColor: isDarkMode ? '#1e1e1e' : '#ffffff' }}>
+          <h2 className="text-xl font-bold mb-4" style={{ color: colors.text }}>{t('settings.about', 'Acerca de')}</h2>
           <p className="text-sm" style={{ color: colors.subText }}>
             CybeCat Desktop v1.0.0<br />
-            Canciones Leídas: {songs.length}
+            {t('settings.songsRead', 'Canciones Leídas:')} {songs.length}
           </p>
         </div>
       </div>

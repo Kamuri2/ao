@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/explicit-function-return-type, @typescript-eslint/no-unused-vars, prefer-const, no-empty, @typescript-eslint/no-explicit-any, react-hooks/immutability, react-refresh/only-export-components, react-hooks/set-state-in-effect */
 import React, { createContext, useState, useEffect, useContext, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Song, Album, Folder, Artist, AudioContextType, Playlist } from '../types';
 
 const AudioContext = createContext<AudioContextType | undefined>(undefined);
@@ -11,6 +12,7 @@ export const useAudio = (): AudioContextType => {
 };
 
 export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { t } = useTranslation();
   const [songs, setSongs] = useState<Song[]>([]);
   const [albums, setAlbums] = useState<Record<string, Album>>({});
   const [folders, setFolders] = useState<Record<string, Folder>>({});
@@ -121,14 +123,14 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           const parsedArray = Array.isArray(parsed) ? parsed : [];
           const sanitized = parsedArray.map((p: any) => ({ ...p, songIds: Array.isArray(p.songIds) ? p.songIds : [] }));
           if (!sanitized.find((p: Playlist) => p.id === 'favorites')) {
-            sanitized.unshift({ id: 'favorites', name: 'Me Gusta', songIds: [], isAuto: true });
+            sanitized.unshift({ id: 'favorites', name: t('playlists.favorites', 'Me Gusta'), songIds: [], isAuto: true });
           }
           setPlaylists(sanitized);
         } catch (e) {
           console.error("Error loading playlists", e);
         }
       } else {
-        setPlaylists([{ id: 'favorites', name: 'Me Gusta', songIds: [], isAuto: true }]);
+        setPlaylists([{ id: 'favorites', name: t('playlists.favorites', 'Me Gusta'), songIds: [], isAuto: true }]);
       }
 
       const cf = localStorage.getItem('@crossfade_enabled');
@@ -445,10 +447,10 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         const newPlaylist: Playlist = { id: Date.now().toString(), name, description, cover, songIds: [] };
         return [...prev, newPlaylist];
       });
-      showToast(`Lista "${name}" creada con éxito.`);
+      showToast(t('playlists.created', 'Lista "{{name}}" creada con éxito.', { name }));
       return;
     } catch {
-      showToast(`Error al crear la lista "${name}".`, 'error');
+      showToast(t('playlists.createError', 'Error al crear la lista "{{name}}".', { name }), 'error');
     }
   };
 
@@ -466,14 +468,19 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           cover: updates.cover || null
         };
       }));
-      showToast(`Lista "${updates.name}" actualizada.`);
+      showToast(t('playlists.updated', 'Lista "{{name}}" actualizada.', { name: updates.name }));
     } catch {
-      showToast(`Error al actualizar la lista "${existing.name}".`, 'error');
+      showToast(t('playlists.updateError', 'Error al actualizar la lista "{{name}}".', { name: existing.name }), 'error');
     }
   };
 
   const deletePlaylist = async (id: string) => {
     if (id === 'favorites') return;
+    const target = playlists.find(p => p.id === id);
+    if (target) {
+      const displayName = target.id === 'favorites' ? t('playlists.favorites', 'Me Gusta') : target.name;
+      showToast(t('playlists.deleted', 'Lista "{{name}}" eliminada.', { name: displayName }));
+    }
     savePlaylists(prev => prev.filter(p => p.id !== id));
   };
 
@@ -482,10 +489,11 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     const target = playlists.find(p => p.id === playlistId);
 
     if (target) {
+      const displayName = target.id === 'favorites' ? t('playlists.favorites', 'Me Gusta') : target.name;
       if (target.songIds.includes(songId)) {
-        showToast(`La canción ya estaba en "${target.name}".`, 'error');
+        showToast(t('playlists.songAlreadyAdded', 'La canción ya estaba en "{{name}}".', { name: displayName }), 'error');
       } else {
-        showToast(`Canción añadida a "${target.name}".`);
+        showToast(t('playlists.songAdded', 'Canción añadida a "{{name}}".', { name: displayName }));
       }
     }
 
@@ -500,7 +508,8 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const removeSongFromPlaylist = async (playlistId: string, songId: string) => {
     const target = playlists.find(p => p.id === playlistId);
     if (target) {
-      showToast(`Canción eliminada de "${target.name}".`);
+      const displayName = target.id === 'favorites' ? t('playlists.favorites', 'Me Gusta') : target.name;
+      showToast(t('playlists.songRemoved', 'Canción eliminada de "{{name}}".', { name: displayName }));
     }
 
     savePlaylists(prev => prev.map(p => {

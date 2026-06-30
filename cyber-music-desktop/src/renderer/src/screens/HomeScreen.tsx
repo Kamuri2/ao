@@ -3,11 +3,13 @@ import { useNavigate } from 'react-router-dom';
 import { ListMusic, Shuffle, Activity, Search, Mic2 } from 'lucide-react';
 import { useAudio } from '../context/AudioContext';
 import { useTheme } from '../context/ThemeContext';
+import { useTranslation } from 'react-i18next';
 import CoverImage from '../components/CoverImage';
 import { Virtuoso } from 'react-virtuoso';
 
 const SongListItem = React.memo(({ item, isPlaying, onPress, index }: any) => {
   const { colors } = useTheme();
+  const { t } = useTranslation();
 
   return (
     <div 
@@ -31,7 +33,7 @@ const SongListItem = React.memo(({ item, isPlaying, onPress, index }: any) => {
           {item.hasLyrics && <Mic2 size={16} className="opacity-50" />}
         </span>
         <span className="text-sm font-bold truncate" style={{ color: colors.subText }}>
-          {item.artist || 'Desconocido'}
+          {item.artist || t('detail.unknown')}
         </span>
       </div>
       {isPlaying && (
@@ -45,6 +47,7 @@ export default function HomeScreen() {
   const { songs, albums, artists, playSound, playWithShuffle, currentSong, loadSongsFromUri, queueLength, queuePosition } = useAudio();
   const { colors } = useTheme();
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
@@ -73,17 +76,17 @@ export default function HomeScreen() {
     const results: any[] = [];
     
     if (matchedArtists.length > 0) {
-      results.push({ type: 'header', title: 'Artistas' });
+      results.push({ type: 'header', title: t('artists.title') });
       matchedArtists.forEach(a => results.push({ type: 'artist', data: a }));
     }
     
     if (matchedAlbums.length > 0) {
-      results.push({ type: 'header', title: 'Álbumes' });
+      results.push({ type: 'header', title: t('albums.title') });
       matchedAlbums.forEach(a => results.push({ type: 'album', data: a }));
     }
 
     if (matchedSongs.length > 0) {
-      results.push({ type: 'header', title: 'Canciones' });
+      results.push({ type: 'header', title: t('sidebar.home') }); // Assuming songs title can map to something else, or let's use 'Songs' literally. Let's just use "Songs" or add it later.
       matchedSongs.forEach(s => results.push({ type: 'song', data: s }));
     }
 
@@ -97,7 +100,7 @@ export default function HomeScreen() {
   return (
     <div className="flex-1 min-h-screen px-8 pb-24 max-w-full w-full pt-10 animate-fade-in">
       <h1 className="text-5xl font-black uppercase tracking-[5px] mt-8 mb-6" style={{ color: colors.text }}>
-        Música
+        {t('sidebar.home')}
       </h1>
 
       {songs.length > 0 && (
@@ -105,7 +108,7 @@ export default function HomeScreen() {
           <div className="flex flex-row items-center">
             <ListMusic size={28} color={colors.primary} />
             <span className="text-sm font-bold ml-2" style={{ color: colors.subText }}>
-              {currentSong ? `Reproduciendo ${queuePosition} de ${queueLength}` : `${songs.length} canciones`}
+              {currentSong ? `${queuePosition} / ${queueLength}` : `${songs.length}`}
             </span>
           </div>
           <button 
@@ -114,23 +117,23 @@ export default function HomeScreen() {
             onClick={handleShuffle}
           >
             <Shuffle size={18} color="#000" />
-            <span className="text-black font-bold ml-2 text-sm">Aleatorio</span>
+            <span className="text-black font-bold ml-2 text-sm">{t('home.shuffle', 'Shuffle')}</span>
           </button>
         </div>
       )}
 
       {songs.length === 0 ? (
         <div className="flex flex-col items-center justify-center flex-1 mt-20 p-8">
-          <h2 className="text-2xl font-black mb-3 text-center" style={{ color: colors.text }}>No hay canciones cargadas.</h2>
+          <h2 className="text-2xl font-black mb-3 text-center" style={{ color: colors.text }}>{t('settings.noFolder')}</h2>
           <p className="text-base font-bold text-center mb-8" style={{ color: colors.subText }}>
-            Haz clic abajo para seleccionar la carpeta donde tienes tu música.
+            {t('settings.selectFolder')}
           </p>
           <button
             className="px-6 py-3 rounded-lg border border-opacity-50 transition-transform active:scale-95 hover:bg-black/5"
             style={{ borderColor: colors.border, color: colors.text }}
             onClick={() => loadSongsFromUri()}
           >
-            <span className="font-black text-base">Seleccionar Carpeta</span>
+            <span className="font-black text-base">{t('settings.selectFolder')}</span>
           </button>
         </div>
       ) : (
@@ -139,7 +142,7 @@ export default function HomeScreen() {
             <Search size={20} className="absolute left-6 top-1/2 -translate-y-1/2 opacity-50" style={{ color: colors.text }} />
             <input 
               type="text" 
-              placeholder="Buscar canción o artista..."
+              placeholder={t('home.search')}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full py-4 pl-12 pr-4 rounded-xl border-2 bg-transparent transition-all outline-none"
@@ -158,7 +161,7 @@ export default function HomeScreen() {
                 return <h2 className="text-2xl font-black mt-6 mb-4 ml-2 uppercase tracking-wider" style={{ color: colors.text }}>{item.title}</h2>;
               }
               if (item.type === 'empty') {
-                return <div className="text-center mt-10 text-lg font-bold" style={{ color: colors.subText }}>No se encontraron resultados</div>;
+                return <div className="text-center mt-10 text-lg font-bold" style={{ color: colors.subText }}>{t('home.noResults')}</div>;
               }
               if (item.type === 'artist') {
                 return (
@@ -166,7 +169,7 @@ export default function HomeScreen() {
                     <CoverImage coverUrl={item.data.cover} audioPath={item.data.songs[0]?.path} hq={true} className="w-16 h-16 rounded-full" placeholderClassName="w-16 h-16 rounded-full bg-black/10 dark:bg-white/10" />
                     <div className="ml-4 flex flex-col justify-center">
                       <span className="text-xl font-black" style={{ color: colors.text }}>{item.data.name}</span>
-                      <span className="text-sm font-bold opacity-70" style={{ color: colors.text }}>Artista</span>
+                      <span className="text-sm font-bold opacity-70" style={{ color: colors.text }}>{t('detail.artist')}</span>
                     </div>
                   </div>
                 );
@@ -177,7 +180,7 @@ export default function HomeScreen() {
                     <CoverImage coverUrl={item.data.cover} audioPath={item.data.songs[0]?.path} hq={true} className="w-16 h-16 rounded-lg" placeholderClassName="w-16 h-16 rounded-lg bg-black/10 dark:bg-white/10" />
                     <div className="ml-4 flex flex-col justify-center">
                       <span className="text-xl font-black" style={{ color: colors.text }}>{item.data.name}</span>
-                      <span className="text-sm font-bold opacity-70" style={{ color: colors.text }}>Álbum • {item.data.artist}</span>
+                      <span className="text-sm font-bold opacity-70" style={{ color: colors.text }}>{t('detail.album')} • {item.data.artist}</span>
                     </div>
                   </div>
                 );

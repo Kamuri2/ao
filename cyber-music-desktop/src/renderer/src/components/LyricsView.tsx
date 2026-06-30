@@ -2,15 +2,18 @@ import { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { useAudio } from '../context/AudioContext';
 import { useTheme } from '../context/ThemeContext';
+import { useTranslation } from 'react-i18next';
 
 interface LyricLine {
   time: number;
   text: string;
+  translatedText?: string;
 }
 
 export default function LyricsView() {
-  const { metadata, progress } = useAudio();
-  const { lyricsFontSize } = useTheme();
+  const { t } = useTranslation();
+  const { metadata, progress, currentSong } = useAudio();
+  const { lyricsFontSize, showTranslatedLyrics, lyricsLanguage } = useTheme();
   const [lyrics, setLyrics] = useState<LyricLine[]>([]);
   const [staticLyrics, setStaticLyrics] = useState<string | null>(null);
   const [isSynced, setIsSynced] = useState(true);
@@ -80,6 +83,41 @@ export default function LyricsView() {
 
   }, [metadata.lyrics]);
 
+  // Handle translation for synced lyrics
+  useEffect(() => {
+    if (showTranslatedLyrics && isSynced && lyrics.length > 0 && currentSong) {
+      // Check if we already have translations
+      if (!lyrics.some(l => l.translatedText !== undefined)) {
+        const texts = lyrics.map(l => l.text);
+        window.api.translateLyrics(currentSong.id, texts, lyricsLanguage).then(translations => {
+          if (translations && translations.length > 0) {
+            setLyrics(prev => prev.map((l, idx) => ({ ...l, translatedText: translations[idx] || '' })));
+          } else {
+            setLyrics(prev => prev.map(l => ({ ...l, translatedText: '' })));
+          }
+        }).catch(err => console.error("Translation error:", err));
+      }
+    }
+  }, [lyrics, showTranslatedLyrics, lyricsLanguage, currentSong, isSynced]);
+
+  // Handle translation for static lyrics
+  useEffect(() => {
+    if (showTranslatedLyrics && !isSynced && staticLyrics && currentSong) {
+      if (!staticLyrics.includes('--- Traducción ---') && !staticLyrics.includes('--- Translation ---')) {
+        // Split and translate line by line to maintain formatting
+        const lines = staticLyrics.split('\n');
+        window.api.translateLyrics(currentSong.id, lines, lyricsLanguage).then(translations => {
+          if (translations && translations.length > 0 && translations.some(t => t.trim() !== '')) {
+            setStaticLyrics(prev => prev + '\n\n--- Traducción ---\n\n' + translations.join('\n'));
+          } else {
+            // Append a hidden marker to prevent retrying
+            setStaticLyrics(prev => prev + '\n\n<!-- --- Translation --- -->');
+          }
+        }).catch(err => console.error("Translation error:", err));
+      }
+    }
+  }, [staticLyrics, showTranslatedLyrics, lyricsLanguage, currentSong, isSynced]);
+
   // Find active line index
   let activeIndex = -1;
   if (isSynced && lyrics.length > 0) {
@@ -110,7 +148,7 @@ export default function LyricsView() {
   if (!metadata.lyrics) {
     return (
       <div className="flex-1 w-full flex items-center justify-center mb-8 px-4 h-full min-h-[300px]">
-        <p className="text-white/40 text-2xl font-bold text-center tracking-widest uppercase">Letras no disponibles</p>
+        <p className="text-white/40 text-2xl font-bold text-center tracking-widest uppercase">{t('player.lyricsNotAvailable', 'Letras no disponibles')}</p>
       </div>
     );
   }
@@ -163,6 +201,14 @@ export default function LyricsView() {
               }}
             >
               {line.text || '\u00A0'}
+              {showTranslatedLyrics && line.translatedText && (
+                <div 
+                  className={`mt-1 transition-all duration-700 ${isActive ? 'text-white/60' : 'text-white/20'}`}
+                  style={{ fontSize: isActive ? `${22 * (lyricsFontSize / 100)}px` : `${14 * (lyricsFontSize / 100)}px` }}
+                >
+                  {line.translatedText}
+                </div>
+              )}
             </div>
           );
         })}

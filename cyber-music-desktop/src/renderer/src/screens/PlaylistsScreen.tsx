@@ -3,22 +3,23 @@ import { useAudio } from '../context/AudioContext';
 import { useNavigate } from 'react-router-dom';
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { useTheme } from '../context/ThemeContext';
+import { useTranslation } from 'react-i18next';
 import { Music2, Play, MoreVertical, Trash2, Edit } from 'lucide-react';
 import PlaylistCreateModal from '../components/PlaylistCreateModal';
 import PlaylistEditModal from '../components/PlaylistEditModal';
 
 export default function PlaylistsScreen() {
   const { playlists, deletePlaylist, currentContextId } = useAudio();
-
+  const { t } = useTranslation();
   const { colors } = useTheme();
-  const navigate = useNavigate(); // eslint-disable-line @typescript-eslint/no-unused-vars
+  const navigate = useNavigate();
   const [hoveredId, setHoveredId] = useState<string | null>(null);
   const [contextMenuId, setContextMenuId] = useState<string | null>(null);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
 
   const handleDelete = (e: React.MouseEvent, id: string): void => {
     e.stopPropagation();
-    if (confirm('¿Estás seguro de que quieres eliminar esta lista?')) {
+    if (confirm(t('playlists.confirmDelete'))) {
       deletePlaylist(id);
       setContextMenuId(null);
     }
@@ -35,15 +36,15 @@ export default function PlaylistsScreen() {
     <div className="p-8 pt-20 pb-32 min-h-screen">
       <div className="flex justify-between items-center mb-8" style={{ color: colors.text }}>
         <div>
-          <h1 className="text-4xl font-black uppercase tracking-widest mb-2" style={{ color: colors.text }}>Playlists</h1>
-          <p className="text-gray-400" style={{ color: colors.subText }}>{playlists.length} playlist{playlists.length !== 1 ? 's' : ''}</p>
+          <h1 className="text-4xl font-black uppercase tracking-widest mb-2" style={{ color: colors.text }}>{t('playlists.title')}</h1>
+          <p className="text-gray-400" style={{ color: colors.subText }}>{playlists.length} {playlists.length === 1 ? t('playlists.singleCount', 'lista') : t('playlists.pluralCount', 'listas')}</p>
         </div>
         <button
           onClick={() => setIsCreateModalOpen(true)}
           className="px-6 py-3 rounded-full font-bold transition-all"
           style={{ backgroundColor: colors.primary, color: '#000' }}
         >
-          + Nueva Playlist
+          + {t('playlists.create')}
         </button>
       </div>
 
@@ -108,21 +109,20 @@ export default function PlaylistsScreen() {
                     className="w-full text-left px-4 py-2 hover:bg-white/10 flex items-center gap-2" style={{ color: colors.text }}
                   >
                     <Edit size={16} />
-                    Editar playlist
+                    {t('playlists.edit', 'Editar Playlist')}
                   </button>
                   <button
                     onClick={(e) => handleDelete(e, playlist.id)}
                     className="w-full text-left px-4 py-2 hover:bg-white/10 flex items-center gap-2" style={{ color: colors.accent }}
                   >
                     <Trash2 size={16} />
-                    Eliminar playlist
+                    {t('playlists.delete', 'Eliminar Playlist')}
                   </button>
                 </div>
               )}
-              {/* Use colors.text and colors.subText for text */}
-              <h3 className="font-bold text-lg truncate group-hover:text-white transition-colors" style={{ color: colors.text }}>{playlist.name}</h3>
+              <h3 className="font-bold text-lg truncate group-hover:text-white transition-colors" style={{ color: colors.text }}>{playlist.id === 'favorites' ? t('playlists.favorites', 'Me Gusta') : playlist.name}</h3>
               <p className="text-sm truncate mt-1" style={{ color: colors.subText }}>
-                {playlist.description || 'Playlist'}
+                {playlist.description || t('playlists.defaultDescription', 'Playlist')}
               </p>
             </div>
           );

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { X, Camera } from 'lucide-react';
 import { useAudio } from '../context/AudioContext';
 import { Playlist } from '../types';
+import { useTranslation } from 'react-i18next';
 
 interface PlaylistCreateModalProps {
   isOpen: boolean;
@@ -11,6 +12,7 @@ interface PlaylistCreateModalProps {
 
 export default function PlaylistCreateModal({ isOpen, onClose, playlist }: PlaylistCreateModalProps) {
   const { createPlaylist, updatePlaylist } = useAudio();
+  const { t } = useTranslation();
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [coverUri, setCoverUri] = useState<string | null>(null);
@@ -70,7 +72,7 @@ export default function PlaylistCreateModal({ isOpen, onClose, playlist }: Playl
           <X size={20} />
         </button>
 
-        <h2 className="text-2xl font-bold mb-6 text-white">{isEditing ? 'Editar Playlist' : 'Crear Playlist'}</h2>
+        <h2 className="text-2xl font-bold mb-6 text-white">{isEditing ? t('playlists.edit', 'Editar Playlist') : t('playlists.create', 'Crear Playlist')}</h2>
 
         <div className="flex flex-col gap-4">
           <div className="flex justify-center mb-2">
@@ -88,14 +90,14 @@ export default function PlaylistCreateModal({ isOpen, onClose, playlist }: Playl
               ) : (
                 <div className="text-center text-white/50 group-hover:text-white transition-colors">
                   <Camera size={28} className="mx-auto mb-2" />
-                  <span className="text-xs font-bold">Subir foto</span>
+                  <span className="text-xs font-bold">{t('detail.changeCover', 'Subir foto')}</span>
                 </div>
               )}
             </button>
           </div>
 
           <div>
-            <label className="block text-xs font-bold text-gray-400 mb-1 uppercase tracking-wider">Nombre</label>
+            <label className="block text-xs font-bold text-gray-400 mb-1 uppercase tracking-wider">{t('playlists.name', 'Nombre')}</label>
             <input
               type="text"
               placeholder=""
@@ -107,7 +109,7 @@ export default function PlaylistCreateModal({ isOpen, onClose, playlist }: Playl
           </div>
 
           <div>
-            <label className="block text-xs font-bold text-gray-400 mb-1 uppercase tracking-wider">Descripción (Opcional)</label>
+            <label className="block text-xs font-bold text-gray-400 mb-1 uppercase tracking-wider">{t('playlists.description', 'Descripción (Opcional)')}</label>
             <textarea
               placeholder=""
               value={description}
@@ -121,7 +123,7 @@ export default function PlaylistCreateModal({ isOpen, onClose, playlist }: Playl
             disabled={!name.trim()}
             className="mt-4 w-full bg-purple-600 hover:bg-purple-500 disabled:bg-white/10 disabled:text-white/30 text-white font-bold py-3 rounded-xl transition-all"
           >
-            {isEditing ? 'Guardar cambios' : 'Crear'}
+            {isEditing ? t('playlists.save', 'Guardar cambios') : t('playlists.create', 'Crear')}
           </button>
         </div>
       </div>

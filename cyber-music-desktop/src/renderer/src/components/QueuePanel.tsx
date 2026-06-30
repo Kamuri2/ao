@@ -4,6 +4,7 @@ import { useTheme } from '../context/ThemeContext';
 import { X, GripVertical } from 'lucide-react';
 import CoverImage from './CoverImage';
 import { Virtuoso, VirtuosoHandle } from 'react-virtuoso';
+import { useTranslation } from 'react-i18next';
 
 interface QueuePanelProps {
   isOpen: boolean;
@@ -13,6 +14,7 @@ interface QueuePanelProps {
 export default function QueuePanel({ onClose }: QueuePanelProps) {
   const { queue, queuePosition, currentSong, reorderQueue, playSound, currentContextId } = useAudio();
   const { colors } = useTheme();
+  const { t } = useTranslation();
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
   const virtuosoRef = useRef<VirtuosoHandle>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -114,7 +116,7 @@ export default function QueuePanel({ onClose }: QueuePanelProps) {
       <div className="flex flex-row items-center justify-between p-6 border-b border-white/10 bg-black/20">
         <div>
           <h2 className="text-xl font-bold text-white">Queue</h2>
-          <p className="text-sm text-white/50">{upcomingQueue.length} canciones restantes</p>
+          <p className="text-sm text-white/50">{upcomingQueue.length} {t('player.queueRemaining', 'canciones restantes')}</p>
         </div>
         <button onClick={onClose} className="p-2 rounded-full hover:bg-white/10 text-white transition-colors">
           <X size={24} />
@@ -174,7 +176,7 @@ export default function QueuePanel({ onClose }: QueuePanelProps) {
                   <p className={`font-bold text-sm truncate ${isPlaying ? 'text-white' : 'text-white/90'}`} style={{ color: isPlaying ? colors.primary : undefined }}>
                     {song.title || song.filename.replace(/\.[^/.]+$/, "")}
                   </p>
-                  <p className="text-xs text-white/50 truncate mt-0.5">{song.artist || 'Desconocido'}</p>
+                  <p className="text-xs text-white/50 truncate mt-0.5">{song.artist || t('artists.unknown', 'Desconocido')}</p>
                 </div>
               </div>
             );

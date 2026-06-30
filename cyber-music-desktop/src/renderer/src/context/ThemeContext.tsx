@@ -106,6 +106,10 @@ type ThemeContextType = {
   removeMascot: (id: string) => void;
   lyricsFontSize: number;
   setLyricsFontSize: (val: number) => void;
+  showTranslatedLyrics: boolean;
+  setShowTranslatedLyrics: (val: boolean) => void;
+  lyricsLanguage: string;
+  setLyricsLanguage: (lang: string) => void;
 };
 
 const ThemeContext = createContext<ThemeContextType>({
@@ -127,7 +131,11 @@ const ThemeContext = createContext<ThemeContextType>({
   addMascot: () => { },
   removeMascot: () => { },
   lyricsFontSize: 100,
-  setLyricsFontSize: () => { }
+  setLyricsFontSize: () => { },
+  showTranslatedLyrics: false,
+  setShowTranslatedLyrics: () => { },
+  lyricsLanguage: 'es',
+  setLyricsLanguage: () => { }
 });
 
 export const useTheme = (): ThemeContextType => useContext(ThemeContext);
@@ -140,6 +148,8 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [customFont, setCustomFontState] = useState<string>('');
   const [mascots, setMascotsState] = useState<{ id: string, url: string }[]>([]);
   const [lyricsFontSize, setLyricsFontSizeState] = useState<number>(100);
+  const [showTranslatedLyrics, setShowTranslatedLyricsState] = useState<boolean>(false);
+  const [lyricsLanguage, setLyricsLanguageState] = useState<string>('es');
 
   useEffect(() => {
     const fam = localStorage.getItem('@theme_family');
@@ -167,6 +177,16 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     const savedLyricsSize = localStorage.getItem('@lyrics_font_size');
     if (savedLyricsSize) {
       setLyricsFontSizeState(Number(savedLyricsSize));
+    }
+
+    const savedShowTranslation = localStorage.getItem('@show_translated_lyrics');
+    if (savedShowTranslation !== null) {
+      setShowTranslatedLyricsState(savedShowTranslation === 'true');
+    }
+
+    const savedLyricsLang = localStorage.getItem('@lyrics_language');
+    if (savedLyricsLang) {
+      setLyricsLanguageState(savedLyricsLang);
     }
   }, []);
 
@@ -271,6 +291,16 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     localStorage.setItem('@lyrics_font_size', val.toString());
   };
 
+  const setShowTranslatedLyrics = (val: boolean): void => {
+    setShowTranslatedLyricsState(val);
+    localStorage.setItem('@show_translated_lyrics', val ? 'true' : 'false');
+  };
+
+  const setLyricsLanguage = (lang: string): void => {
+    setLyricsLanguageState(lang);
+    localStorage.setItem('@lyrics_language', lang);
+  };
+
   const toggleTheme = (): void => {
     setIsDarkMode(!isDarkMode);
   };
@@ -285,7 +315,8 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       colors: currentTheme.colors, particles, setParticles, themeId,
       backgroundImage, setBackgroundImage, pickBackgroundImage,
       customFont, setCustomFont, mascots, addMascot, removeMascot,
-      lyricsFontSize, setLyricsFontSize
+      lyricsFontSize, setLyricsFontSize, showTranslatedLyrics, setShowTranslatedLyrics,
+      lyricsLanguage, setLyricsLanguage
     }}>
       <div style={{
         flex: 1,

@@ -1,5 +1,6 @@
 import { X, Plus, Music2 } from 'lucide-react';
 import { useAudio } from '../context/AudioContext';
+import { useTranslation } from 'react-i18next';
 
 interface AddToPlaylistModalProps {
   isOpen: boolean;
@@ -10,6 +11,7 @@ interface AddToPlaylistModalProps {
 
 export default function AddToPlaylistModal({ isOpen, onClose, songId, onOpenCreateNew }: AddToPlaylistModalProps) {
   const { playlists, addSongToPlaylist } = useAudio();
+  const { t } = useTranslation();
 
   if (!isOpen || !songId) return null;
 
@@ -35,7 +37,7 @@ export default function AddToPlaylistModal({ isOpen, onClose, songId, onOpenCrea
           <X size={20} />
         </button>
 
-        <h2 className="text-xl font-bold mb-6 text-white text-center">Añadir a Playlist</h2>
+        <h2 className="text-xl font-bold mb-6 text-white text-center">{t('player.addToPlaylist', 'Añadir a Playlist')}</h2>
 
         <div className="flex flex-col gap-2 max-h-[60vh] overflow-y-auto pr-2 custom-scrollbar">
           <button
@@ -48,7 +50,7 @@ export default function AddToPlaylistModal({ isOpen, onClose, songId, onOpenCrea
             <div className="w-12 h-12 rounded-lg bg-white/5 flex items-center justify-center group-hover:bg-white/20 transition-colors">
               <Plus size={24} className="text-white" />
             </div>
-            <span className="font-bold text-white">Crear nueva lista</span>
+            <span className="font-bold text-white">{t('player.createPlaylist', 'Crear nueva lista')}</span>
           </button>
 
           <div className="h-[1px] bg-white/10 my-2 w-full" />
@@ -69,8 +71,8 @@ export default function AddToPlaylistModal({ isOpen, onClose, songId, onOpenCrea
                 )}
               </div>
               <div className="flex-1 min-w-0">
-                <p className="font-bold text-white truncate">{playlist.name}</p>
-                <p className="text-xs text-gray-400 truncate">{playlist.songIds.length} canciones</p>
+                <p className="font-bold text-white truncate">{playlist.id === 'favorites' ? t('playlists.favorites', 'Me Gusta') : playlist.name}</p>
+                <p className="text-xs text-gray-400 truncate">{playlist.songIds.length} {t('detail.songs', 'canciones')}</p>
               </div>
             </button>
           ))}
