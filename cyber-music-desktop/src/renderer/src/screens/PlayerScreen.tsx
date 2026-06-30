@@ -145,7 +145,7 @@ export default function PlayerScreen() {
           <p className="text-xs font-bold text-white/50 tracking-widest uppercase">
             Reproduciendo desde {(() => {
               if (!currentContextId || currentContextId === 'all') return 'tu música';
-              if (currentContextId === 'queue') return 'la cola de reproducción';
+              if (currentContextId === 'queue') return 'la Queue';
               if (currentContextId === 'favorites') return 'tus favoritos';
               if (currentContextId.startsWith('album:')) return `el álbum • ${currentContextId.split('album:')[1]}`;
               if (currentContextId.startsWith('artist:')) return `el artista • ${currentContextId.split('artist:')[1]}`;
@@ -329,7 +329,7 @@ export default function PlayerScreen() {
             <button
               onClick={() => setIsQueueOpen(!isQueueOpen)}
               className={`p-3 rounded-full transition-colors ${isQueueOpen ? 'bg-white/20 text-white' : 'hover:bg-white/10 text-white/70 hover:text-white'}`}
-              title="Cola de reproducción"
+              title="Queue"
               style={{ color: isQueueOpen ? colors.primary : undefined }}
             >
               <ListMusic size={24} />

@@ -11,7 +11,7 @@ interface QueuePanelProps {
 }
 
 export default function QueuePanel({ onClose }: QueuePanelProps) {
-  const { queue, queuePosition, currentSong, reorderQueue, playSound } = useAudio();
+  const { queue, queuePosition, currentSong, reorderQueue, playSound, currentContextId } = useAudio();
   const { colors } = useTheme();
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
   const virtuosoRef = useRef<VirtuosoHandle>(null);
@@ -113,7 +113,7 @@ export default function QueuePanel({ onClose }: QueuePanelProps) {
     <div className="flex-1 w-full h-full flex flex-col animate-fade-in bg-white/5 rounded-2xl overflow-hidden border border-white/10">
       <div className="flex flex-row items-center justify-between p-6 border-b border-white/10 bg-black/20">
         <div>
-          <h2 className="text-xl font-bold text-white">Cola de reproducción</h2>
+          <h2 className="text-xl font-bold text-white">Queue</h2>
           <p className="text-sm text-white/50">{upcomingQueue.length} canciones restantes</p>
         </div>
         <button onClick={onClose} className="p-2 rounded-full hover:bg-white/10 text-white transition-colors">
@@ -146,7 +146,7 @@ export default function QueuePanel({ onClose }: QueuePanelProps) {
                   ${isPlaying ? 'bg-white/10' : 'hover:bg-white/5'}
                   ${draggedIndex === index ? 'opacity-50 scale-95' : 'opacity-100'}
                 `}
-                onClick={() => playSound(song, 'queue', queue, false)}
+                onClick={() => playSound(song, currentContextId, undefined, undefined, false)}
               >
                 <div className="mr-3 cursor-grab text-white/30 hover:text-white/70 active:cursor-grabbing p-1" onClick={(e) => e.stopPropagation()}>
                   <GripVertical size={20} />
